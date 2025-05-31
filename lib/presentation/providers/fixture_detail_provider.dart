@@ -30,9 +30,9 @@ class FixtureDetailProvider with ChangeNotifier {
     required GetFixtureStatisticsUseCase getFixtureStatsUseCase,
     required GetOddsUseCase getOddsUseCase, // Nome correto
     required GetH2HUseCase getH2HUseCase,
-  }) : _getFixtureStatsUseCase = getFixtureStatsUseCase,
-       _getOddsUseCase = getOddsUseCase, // Nome correto
-       _getH2HUseCase = getH2HUseCase {
+  })  : _getFixtureStatsUseCase = getFixtureStatsUseCase,
+        _getOddsUseCase = getOddsUseCase, // Nome correto
+        _getH2HUseCase = getH2HUseCase {
     _fixtureFullData = FixtureFullData(baseFixture: baseFixture, odds: []);
   }
 
@@ -52,8 +52,7 @@ class FixtureDetailProvider with ChangeNotifier {
       return;
     if (_hasFetchedOnce &&
         !forceRefresh &&
-        _overallStatus != FixtureDetailOverallStatus.error)
-      return;
+        _overallStatus != FixtureDetailOverallStatus.error) return;
 
     _overallStatus = FixtureDetailOverallStatus.loading;
     if (forceRefresh ||
@@ -77,16 +76,14 @@ class FixtureDetailProvider with ChangeNotifier {
       _hasFetchedOnce = true;
 
       // Reavaliar status geral
-      bool anyError =
-          _fixtureFullData!.statsStatus == SectionStatus.error ||
+      bool anyError = _fixtureFullData!.statsStatus == SectionStatus.error ||
           _fixtureFullData!.oddsStatus == SectionStatus.error ||
           _fixtureFullData!.h2hStatus == SectionStatus.error;
       bool anyLoading =
           _fixtureFullData!.statsStatus == SectionStatus.loading ||
-          _fixtureFullData!.oddsStatus == SectionStatus.loading ||
-          _fixtureFullData!.h2hStatus == SectionStatus.loading;
-      bool allNoData =
-          _fixtureFullData!.statsStatus == SectionStatus.noData &&
+              _fixtureFullData!.oddsStatus == SectionStatus.loading ||
+              _fixtureFullData!.h2hStatus == SectionStatus.loading;
+      bool allNoData = _fixtureFullData!.statsStatus == SectionStatus.noData &&
           _fixtureFullData!.oddsStatus == SectionStatus.noData &&
           _fixtureFullData!.h2hStatus == SectionStatus.noData;
 
@@ -109,9 +106,8 @@ class FixtureDetailProvider with ChangeNotifier {
         _overallStatus =
             FixtureDetailOverallStatus.partiallyLoaded; // ou manter loading
       } else if (allNoData) {
-        _overallStatus =
-            FixtureDetailOverallStatus
-                .fullyLoaded; // Carregado, mas sem dados específicos
+        _overallStatus = FixtureDetailOverallStatus
+            .fullyLoaded; // Carregado, mas sem dados específicos
         _generalErrorMessage =
             "Nenhum dado detalhado (stats, odds, H2H) encontrado para este jogo.";
       } else {
@@ -132,8 +128,7 @@ class FixtureDetailProvider with ChangeNotifier {
       return;
     if (_fixtureFullData?.statsStatus == SectionStatus.loaded &&
         !forceRefresh &&
-        _fixtureFullData?.fixtureStats != null)
-      return;
+        _fixtureFullData?.fixtureStats != null) return;
     if (_fixtureFullData?.statsStatus == SectionStatus.noData && !forceRefresh)
       return;
 
@@ -163,19 +158,17 @@ class FixtureDetailProvider with ChangeNotifier {
       (stats) {
         _fixtureFullData = _fixtureFullData?.copyWith(
           fixtureStats: stats,
-          statsStatus:
-              (stats.homeTeam == null &&
-                      stats.awayTeam == null &&
-                      (stats.homeTeam?.expectedGoals ==
-                          null)) // Checagem mais robusta para noData
-                  ? SectionStatus.noData
-                  : SectionStatus.loaded,
-          statsErrorMessage:
-              (stats.homeTeam == null &&
-                      stats.awayTeam == null &&
-                      (stats.homeTeam?.expectedGoals == null))
-                  ? "Estatísticas pré-jogo não disponíveis."
-                  : null,
+          statsStatus: (stats?.homeTeam == null &&
+                  stats?.awayTeam == null &&
+                  (stats?.homeTeam?.expectedGoals ==
+                      null)) // Checagem mais robusta para noData
+              ? SectionStatus.noData
+              : SectionStatus.loaded,
+          statsErrorMessage: (stats?.homeTeam == null &&
+                  stats?.awayTeam == null &&
+                  (stats?.homeTeam?.expectedGoals == null))
+              ? "Estatísticas pré-jogo não disponíveis."
+              : null,
         );
       },
     );
@@ -189,8 +182,7 @@ class FixtureDetailProvider with ChangeNotifier {
       return;
     if (_fixtureFullData?.oddsStatus == SectionStatus.loaded &&
         !forceRefresh &&
-        (_fixtureFullData?.odds.isNotEmpty ?? false))
-      return;
+        (_fixtureFullData?.odds.isNotEmpty ?? false)) return;
     if (_fixtureFullData?.oddsStatus == SectionStatus.noData && !forceRefresh)
       return;
 
@@ -219,14 +211,12 @@ class FixtureDetailProvider with ChangeNotifier {
         final filteredOdds = _filterAndSortOddsMarkets(oddsList);
         _fixtureFullData = _fixtureFullData?.copyWith(
           odds: filteredOdds,
-          oddsStatus:
-              filteredOdds.isEmpty
-                  ? SectionStatus.noData
-                  : SectionStatus.loaded,
-          oddsErrorMessage:
-              filteredOdds.isEmpty
-                  ? "Nenhuma odd encontrada para os mercados principais."
-                  : null,
+          oddsStatus: filteredOdds.isEmpty
+              ? SectionStatus.noData
+              : SectionStatus.loaded,
+          oddsErrorMessage: filteredOdds.isEmpty
+              ? "Nenhuma odd encontrada para os mercados principais."
+              : null,
         );
       },
     );
@@ -240,8 +230,7 @@ class FixtureDetailProvider with ChangeNotifier {
       return;
     if (_fixtureFullData?.h2hStatus == SectionStatus.loaded &&
         !forceRefresh &&
-        (_fixtureFullData?.h2hFixtures?.isNotEmpty ?? false))
-      return;
+        (_fixtureFullData?.h2hFixtures?.isNotEmpty ?? false)) return;
     if (_fixtureFullData?.h2hStatus == SectionStatus.noData && !forceRefresh)
       return;
 
@@ -274,10 +263,9 @@ class FixtureDetailProvider with ChangeNotifier {
           h2hFixtures: h2hList,
           h2hStatus:
               h2hList.isEmpty ? SectionStatus.noData : SectionStatus.loaded,
-          h2hErrorMessage:
-              h2hList.isEmpty
-                  ? "Nenhum histórico de confronto direto encontrado."
-                  : null,
+          h2hErrorMessage: h2hList.isEmpty
+              ? "Nenhum histórico de confronto direto encontrado."
+              : null,
         );
       },
     );
@@ -298,16 +286,15 @@ class FixtureDetailProvider with ChangeNotifier {
       // Para Over/Under é melhor filtrar pelo nome do mercado E pela linha (ex: "2.5")
     ];
 
-    List<PrognosticMarket> filtered =
-        allMarkets.where((market) {
-          if (desiredMarketIds.contains(market.marketId)) return true;
-          // Lógica específica para Over/Under 2.5
-          if (market.marketName.toLowerCase().contains("goals over/under") &&
-              market.options.any((o) => o.label.toLowerCase().contains("2.5")))
-            return true;
-          // Adicione aqui outros filtros baseados em market.marketName se necessário
-          return false;
-        }).toList();
+    List<PrognosticMarket> filtered = allMarkets.where((market) {
+      if (desiredMarketIds.contains(market.marketId)) return true;
+      // Lógica específica para Over/Under 2.5
+      if (market.marketName.toLowerCase().contains("goals over/under") &&
+          market.options.any((o) => o.label.toLowerCase().contains("2.5")))
+        return true;
+      // Adicione aqui outros filtros baseados em market.marketName se necessário
+      return false;
+    }).toList();
 
     // Ordenar para consistência na UI (Ex: Match Winner primeiro)
     filtered.sort((a, b) {

@@ -555,6 +555,7 @@ class GenerateSuggestedSlipsUseCase {
           dateGenerated: DateTime.now(),
           overallReasoning:
               "Seleções com alta confiança individual baseada em análise.",
+          totalOddsDisplay: '',
         ),
       );
     }
@@ -609,6 +610,7 @@ class GenerateSuggestedSlipsUseCase {
           dateGenerated: DateTime.now(),
           overallReasoning:
               "Combinação buscando odd alvo com base em análise e valor percebido.",
+          totalOddsDisplay: '',
         ),
       );
     }

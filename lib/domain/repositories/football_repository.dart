@@ -1,4 +1,7 @@
 // lib/domain/repositories/football_repository.dart
+// ... (imports existentes, incluindo fixture.dart)
+// import '../entities/fixture.dart'; // Já deve estar lá
+
 import 'package:dartz/dartz.dart';
 import 'package:product_gamers/core/config/failure.dart';
 import 'package:product_gamers/domain/entities/entities/fixture.dart';
@@ -9,76 +12,44 @@ import 'package:product_gamers/domain/entities/entities/player_stats.dart';
 import 'package:product_gamers/domain/entities/entities/prognostic_market.dart';
 import 'package:product_gamers/domain/entities/entities/referee_stats.dart';
 import 'package:product_gamers/domain/entities/entities/standing_info.dart';
-
-// Não precisamos importar DataForPrediction, SuggestedBetSlip, LiveGameInsight, LiveBetSuggestion aqui
-// porque o repositório não lida diretamente com esses objetos de agregação ou sugestão;
-// eles são construídos/usados pelos UseCases ou Providers.
+import 'package:product_gamers/main.dart';
 
 abstract class FootballRepository {
-  // --- Métodos para Dados Pré-Jogo ---
   Future<Either<Failure, List<League>>> getLeagues();
-
   Future<Either<Failure, List<Fixture>>> getFixturesForLeague(
+    // NOVO MÉTODO
     int leagueId,
     String season, {
-    int nextGames, // Parâmetro nomeado opcional
+    int nextGames = 15,
   });
 
+  // --- Outros métodos (com stubs na implementação por enquanto) ---
   Future<Either<Failure, List<PrognosticMarket>>> getOddsForFixture(
-    int fixtureId, {
-    int? bookmakerId, // Parâmetro nomeado opcional
-  });
-
-  Future<Either<Failure, FixtureStatsEntity>> getFixtureStatistics({
-    required int fixtureId,
-    required int homeTeamId,
-    required int awayTeamId,
-  });
-
-  Future<Either<Failure, List<Fixture>>> getHeadToHead({
-    required int team1Id,
-    required int team2Id,
-    int lastN = 10,
-    String? status,
-  });
-
-  Future<Either<Failure, List<PlayerSeasonStats>>> getPlayersFromSquad({
-    required int teamId,
-  });
-
-  Future<Either<Failure, PlayerSeasonStats?>> getPlayerStats({
-    // Pode retornar nulo se jogador/stats não encontrados
-    required int playerId,
-    required String season,
-  });
-
-  Future<Either<Failure, List<PlayerSeasonStats>>> getLeagueTopScorers({
-    required int leagueId,
-    required String season,
-    int topN = 10,
-  });
-
-  Future<Either<Failure, RefereeStats>> getRefereeDetailsAndAggregateStats({
-    required int refereeId,
-    required String season,
-  });
-
-  Future<Either<Failure, List<StandingInfo>>> getLeagueStandings({
-    required int leagueId,
-    required String season,
-  });
-
-  // --- Métodos para Dados Ao Vivo ---
-  Future<Either<Failure, LiveFixtureUpdate>> getLiveFixtureUpdate(
-    int fixtureId,
-  );
-
+      int fixtureId,
+      {int? bookmakerId});
   Future<Either<Failure, List<PrognosticMarket>>> getLiveOddsForFixture(
-    int fixtureId, {
-    int? bookmakerId,
-  });
-
-  // Você poderia adicionar mais métodos conforme necessário, por exemplo:
-  // Future<Either<Failure, TeamDetailsEntity>> getTeamDetails(int teamId);
-  // Future<Either<Failure, PlayerDetailsEntity>> getPlayerDetails(int playerId);
+      int fixtureId,
+      {int? bookmakerId});
+  Future<Either<Failure, FixtureStatsEntity?>> getFixtureStatistics(
+      {required int fixtureId,
+      required int homeTeamId,
+      required int awayTeamId}); // Note: FixtureStatsEntity? para permitir nulo
+  Future<Either<Failure, List<Fixture>>> getHeadToHead(
+      {required int team1Id,
+      required int team2Id,
+      int lastN = 10,
+      String? status});
+  Future<Either<Failure, List<PlayerSeasonStats>>> getPlayersFromSquad(
+      {required int teamId});
+  Future<Either<Failure, PlayerSeasonStats?>> getPlayerStats(
+      {required int playerId, required String season});
+  Future<Either<Failure, List<PlayerSeasonStats>>> getLeagueTopScorers(
+      {required int leagueId, required String season, int topN = 10});
+  Future<Either<Failure, RefereeStats?>> getRefereeDetailsAndAggregateStats(
+      {required int refereeId,
+      required String season}); // Note: RefereeStats? para permitir nulo
+  Future<Either<Failure, List<StandingInfo>>> getLeagueStandings(
+      {required int leagueId, required String season});
+  Future<Either<Failure, LiveFixtureUpdate?>> getLiveFixtureUpdate(
+      int fixtureId); // Note: LiveFixtureUpdate?
 }

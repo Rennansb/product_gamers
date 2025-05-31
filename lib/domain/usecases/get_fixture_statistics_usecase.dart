@@ -10,7 +10,7 @@ class GetFixtureStatisticsUseCase {
 
   GetFixtureStatisticsUseCase(this.repository);
 
-  Future<Either<Failure, FixtureStatsEntity>> call({
+  Future<Either<Failure, FixtureStatsEntity?>> call({
     required int fixtureId,
     required int homeTeamId,
     required int awayTeamId,

@@ -1,34 +1,26 @@
 // lib/domain/entities/fixture.dart
 import 'package:equatable/equatable.dart';
-import 'team.dart'; // Importa TeamInFixture
+import 'team.dart'; // Importa TeamInFixture (que deve estar em lib/domain/entities/team.dart)
 
 class Fixture extends Equatable {
   final int id;
   final DateTime date;
-  final String statusShort; // Ex: "NS", "FT", "HT", "LIVE"
-  final String statusLong; // Ex: "Not Started", "Match Finished"
-
+  final String statusShort;
+  final String statusLong;
   final TeamInFixture homeTeam;
   final TeamInFixture awayTeam;
-
-  final int? homeGoals; // Gols atuais/finais
-  final int? awayGoals; // Gols atuais/finais
-
+  final int? homeGoals;
+  final int? awayGoals;
   final int leagueId;
   final String leagueName;
-  final String? leagueLogoUrl; // Logo da liga associada
-
-  // Informações adicionais que o FixtureModel.toEntity() mapeia
+  final String? leagueLogoUrl;
   final String? refereeName;
   final String? venueName;
-  final int? elapsedMinutes; // Minutos decorridos se ao vivo
-
-  // Placar de diferentes períodos
+  final int? elapsedMinutes;
   final int? halftimeHomeScore;
   final int? halftimeAwayScore;
   final int? fulltimeHomeScore;
   final int? fulltimeAwayScore;
-  // Poderia adicionar extratime e penalty scores se necessário
 
   const Fixture({
     required this.id,
@@ -53,23 +45,23 @@ class Fixture extends Equatable {
 
   @override
   List<Object?> get props => [
-    id,
-    date,
-    statusShort,
-    statusLong,
-    homeTeam,
-    awayTeam,
-    homeGoals,
-    awayGoals,
-    leagueId,
-    leagueName,
-    leagueLogoUrl,
-    refereeName,
-    venueName,
-    elapsedMinutes,
-    halftimeHomeScore,
-    halftimeAwayScore,
-    fulltimeHomeScore,
-    fulltimeAwayScore,
-  ];
+        id,
+        date,
+        statusShort,
+        statusLong,
+        homeTeam,
+        awayTeam,
+        homeGoals,
+        awayGoals,
+        leagueId,
+        leagueName,
+        leagueLogoUrl,
+        refereeName,
+        venueName,
+        elapsedMinutes,
+        halftimeHomeScore,
+        halftimeAwayScore,
+        fulltimeHomeScore,
+        fulltimeAwayScore,
+      ];
 }

@@ -10,7 +10,7 @@ class GetLiveFixtureUpdateUseCase {
 
   GetLiveFixtureUpdateUseCase(this.repository);
 
-  Future<Either<Failure, LiveFixtureUpdate>> call(int fixtureId) async {
+  Future<Either<Failure, LiveFixtureUpdate?>> call(int fixtureId) async {
     return await repository.getLiveFixtureUpdate(fixtureId);
   }
 }

@@ -9,7 +9,7 @@ class GetRefereeStatsUseCase {
   final FootballRepository repository;
   GetRefereeStatsUseCase(this.repository);
 
-  Future<Either<Failure, RefereeStats>> call({
+  Future<Future<Either<Failure, RefereeStats?>>> call({
     required int refereeId, // Assumindo que temos o ID
     required String season,
   }) async {

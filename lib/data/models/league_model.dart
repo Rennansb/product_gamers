@@ -1,44 +1,45 @@
 // lib/data/models/league_model.dart
 import 'package:equatable/equatable.dart';
-import 'package:product_gamers/domain/entities/entities/league.dart';
+
+import '../../domain/entities/entities/league.dart';
+
+// Importa a entidade de domínio League
 
 // Sub-modelo para informações de temporada dentro da liga
 class LeagueSeasonModel extends Equatable {
   final int year;
-  final String start; // Data de início (ex: "2023-08-11")
-  final String end; // Data de término (ex: "2024-05-19")
-  final bool current; // Se é a temporada atual
-  // A API-Football pode incluir 'coverage' aqui, detalhando o que é coberto (fixtures, odds, etc.)
-  // final Map<String, bool>? coverage; // Ex: {"fixtures": {"events": true, ...}, "odds": true}
+  final String
+      startDate; // Nome do campo corrigido de 'start' para 'startDate' para clareza
+  final String
+      endDate; // Nome do campo corrigido de 'end' para 'endDate' para clareza
+  final bool current;
 
   const LeagueSeasonModel({
     required this.year,
-    required this.start,
-    required this.end,
+    required this.startDate, // Usando nome claro
+    required this.endDate, // Usando nome claro
     required this.current,
-    // this.coverage
   });
 
   factory LeagueSeasonModel.fromJson(Map<String, dynamic> json) {
     return LeagueSeasonModel(
       year: json['year'] as int? ?? 0,
-      start: json['start'] as String? ?? '',
-      end: json['end'] as String? ?? '',
+      startDate: json['start'] as String? ?? '', // Mapeia do JSON 'start'
+      endDate: json['end'] as String? ?? '', // Mapeia do JSON 'end'
       current: json['current'] as bool? ?? false,
-      // coverage: json['coverage'] != null ? Map<String, bool>.from(json['coverage']) : null, // Exemplo se coverage for simples
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'year': year,
-    'start': start,
-    'end': end,
-    'current': current,
-    // 'coverage': coverage,
-  };
+        // Para consistência se for usado
+        'year': year,
+        'start': startDate,
+        'end': endDate,
+        'current': current,
+      };
 
   @override
-  List<Object?> get props => [year, start, end, current /*, coverage*/];
+  List<Object?> get props => [year, startDate, endDate, current];
 }
 
 // Modelo Principal da Liga/Competição
@@ -54,10 +55,10 @@ class LeagueModel extends Equatable {
   final String? countryFlagUrl;
 
   final List<LeagueSeasonModel>
-  seasons; // Lista de temporadas disponíveis para esta liga
+      seasons; // Lista de temporadas disponíveis para esta liga
 
   // Campo auxiliar para nome amigável (não vem da API, preenchido pelo nosso app)
-  final String? friendlyName;
+  final String? friendlyName; // Pode ser nulo inicialmente, preenchido depois
 
   const LeagueModel({
     required this.id,
@@ -72,17 +73,16 @@ class LeagueModel extends Equatable {
   });
 
   factory LeagueModel.fromJson(Map<String, dynamic> json) {
-    // A API-Football no endpoint /leagues retorna um objeto principal 'league'
-    // e um objeto 'country', e uma lista 'seasons'.
-    final leagueData =
-        json['league'] ??
-        json; // Se 'league' não existir, usa o json raiz (flexibilidade)
+    // O endpoint /leagues da API-Football retorna um objeto principal 'league',
+    // um objeto 'country', e uma lista 'seasons'.
+    final leagueData = json['league'] ?? json;
     final countryData = json['country'] ?? {};
-    final seasonsList =
-        (json['seasons'] as List<dynamic>?)
-            ?.map((s) => LeagueSeasonModel.fromJson(s as Map<String, dynamic>))
-            .toList() ??
-        [];
+    final seasonsListJson = json['seasons'] as List<dynamic>? ?? [];
+
+    final List<LeagueSeasonModel> parsedSeasons = seasonsListJson
+        .map((sJson) =>
+            LeagueSeasonModel.fromJson(sJson as Map<String, dynamic>))
+        .toList();
 
     return LeagueModel(
       id: leagueData['id'] as int? ?? 0,
@@ -90,83 +90,85 @@ class LeagueModel extends Equatable {
       type: leagueData['type'] as String?,
       logoUrl: leagueData['logo'] as String?,
       countryName: countryData['name'] as String?,
-      countryCode: countryData['code'] as String?,
-      countryFlagUrl: countryData['flag'] as String?,
-      seasons: seasonsList,
+      countryCode: countryData['code'] as String?, // Pode ser nulo
+      countryFlagUrl: countryData['flag'] as String?, // Pode ser nulo
+      seasons: parsedSeasons,
       // friendlyName não vem da API, será preenchido externamente se necessário
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'league': {'id': id, 'name': name, 'type': type, 'logo': logoUrl},
-    'country': {
-      'name': countryName,
-      'code': countryCode,
-      'flag': countryFlagUrl,
-    },
-    'seasons': seasons.map((s) => s.toJson()).toList(),
-    // friendlyName não é parte do JSON da API
-  };
+        'league': {
+          'id': id,
+          'name': name,
+          'type': type,
+          'logo': logoUrl,
+        },
+        'country': {
+          'name': countryName,
+          'code': countryCode,
+          'flag': countryFlagUrl,
+        },
+        'seasons': seasons.map((s) => s.toJson()).toList(),
+        // friendlyName não é parte do JSON da API
+      };
 
   // Converte para a entidade de domínio League
+// Em lib/data/models/league_model.dart
+// Dentro da classe LeagueModel
+
+  // Dentro de lib/data/models/league_model.dart (método toEntity da classe LeagueModel)
   League toEntity() {
-    // Para a entidade, podemos querer a temporada atual ou a mais recente
-    LeagueSeasonModel? currentOrLatestSeason;
+    LeagueSeasonModel? targetSeason;
     if (seasons.isNotEmpty) {
-      currentOrLatestSeason = seasons.firstWhere(
-        (s) => s.current,
-        orElse: () => seasons.last,
-      );
+      targetSeason = seasons.firstWhere((s) => s.current, orElse: () {
+        List<LeagueSeasonModel> sortedSeasons = List.from(seasons);
+        sortedSeasons.sort((a, b) => b.year.compareTo(a.year));
+        return sortedSeasons.first;
+      });
     }
 
+    // Esta chamada deve corresponder ao construtor da entidade League
     return League(
-      id: id,
-      name: name, // Usaremos o friendlyName na UI se disponível
+      id: id, // passando o valor de 'id' do LeagueModel para o parâmetro nomeado 'id' da entidade League
+      name: name,
       type: type,
       logoUrl: logoUrl,
       countryName: countryName,
       countryFlagUrl: countryFlagUrl,
-      currentSeasonYear:
-          currentOrLatestSeason?.year, // Entidade pode querer só o ano
-      friendlyName: friendlyName ?? name, // Usa o nome da API como fallback
+      currentSeasonYear: targetSeason?.year,
+      friendlyName: friendlyName ?? name,
     );
   }
 
   // Método para auxiliar na atualização do friendlyName, já que ele não vem da API
   LeagueModel copyWith({
-    int? id,
-    String? name,
-    String? type,
-    String? logoUrl,
-    String? countryName,
-    String? countryCode,
-    String? countryFlagUrl,
-    List<LeagueSeasonModel>? seasons,
-    String? friendlyName, // Permite definir/atualizar o friendlyName
+    String? friendlyName,
+    // Você pode adicionar outros campos aqui se precisar copiar com mais modificações
   }) {
     return LeagueModel(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      type: type ?? this.type,
-      logoUrl: logoUrl ?? this.logoUrl,
-      countryName: countryName ?? this.countryName,
-      countryCode: countryCode ?? this.countryCode,
-      countryFlagUrl: countryFlagUrl ?? this.countryFlagUrl,
-      seasons: seasons ?? this.seasons,
+      id: id,
+      name: name,
+      type: type,
+      logoUrl: logoUrl,
+      countryName: countryName,
+      countryCode: countryCode,
+      countryFlagUrl: countryFlagUrl,
+      seasons: seasons,
       friendlyName: friendlyName ?? this.friendlyName,
     );
   }
 
   @override
   List<Object?> get props => [
-    id,
-    name,
-    type,
-    logoUrl,
-    countryName,
-    countryCode,
-    countryFlagUrl,
-    seasons,
-    friendlyName,
-  ];
+        id,
+        name,
+        type,
+        logoUrl,
+        countryName,
+        countryCode,
+        countryFlagUrl,
+        seasons,
+        friendlyName
+      ];
 }

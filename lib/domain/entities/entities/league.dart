@@ -3,15 +3,16 @@ import 'package:equatable/equatable.dart';
 
 class League extends Equatable {
   final int id;
-  final String name; // Este será o nome original da API
+  final String name;
   final String? type;
   final String? logoUrl;
   final String? countryName;
   final String? countryFlagUrl;
-  final int? currentSeasonYear; // Ano da temporada atual/mais recente
-  final String
-  friendlyName; // Nome amigável para exibição (pode ser igual a 'name')
+  final int? currentSeasonYear;
+  final String friendlyName;
 
+  // ===== ESTE É O CONSTRUTOR CRÍTICO =====
+  // VERIFIQUE SE AS CHAVES '{' E '}' ESTÃO PRESENTES E CORRETAS
   const League({
     required this.id,
     required this.name,
@@ -22,16 +23,17 @@ class League extends Equatable {
     this.currentSeasonYear,
     required this.friendlyName,
   });
+  // ========================================
 
   @override
   List<Object?> get props => [
-    id,
-    name,
-    type,
-    logoUrl,
-    countryName,
-    countryFlagUrl,
-    currentSeasonYear,
-    friendlyName,
-  ];
+        id,
+        name,
+        type,
+        logoUrl,
+        countryName,
+        countryFlagUrl,
+        currentSeasonYear,
+        friendlyName
+      ];
 }
