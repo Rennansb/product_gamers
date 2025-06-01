@@ -126,8 +126,7 @@ class LiveFixtureUpdateModel extends Equatable {
 
     return LiveFixtureUpdateModel(
       fixtureId: fixtureData['id'] as int? ?? 0,
-      date:
-          DateTime.tryParse(fixtureData['date'] as String? ?? '') ??
+      date: DateTime.tryParse(fixtureData['date'] as String? ?? '') ??
           DateTime.now(),
       referee: fixtureData['referee'] as String?,
       timezone: fixtureData['timezone'] as String?,
@@ -154,12 +153,11 @@ class LiveFixtureUpdateModel extends Equatable {
       extratimeAwayScore: scoreData['extratime']?['away'] as int?,
       penaltyHomeScore: scoreData['penalty']?['home'] as int?,
       penaltyAwayScore: scoreData['penalty']?['away'] as int?,
-      events:
-          eventsData
-              .map(
-                (e) => LiveGameEventModel.fromJson(e as Map<String, dynamic>),
-              )
-              .toList(),
+      events: eventsData
+          .map(
+            (e) => LiveGameEventModel.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
       lineupsRaw: lineupsData?.map((l) => l as Map<String, dynamic>).toList(),
       homeTeamLiveStats: parsedHomeLiveStats,
       awayTeamLiveStats: parsedAwayLiveStats,
@@ -167,25 +165,21 @@ class LiveFixtureUpdateModel extends Equatable {
   }
 
   LiveFixtureUpdate toEntity() {
-    List<LiveGameEvent> enrichedEvents =
-        events.map((eventModel) {
-          final baseEventEntity =
-              eventModel.toEntity(); // Cria a entidade base do evento
-          String? resolvedTeamName = baseEventEntity.teamName;
+    List<LiveGameEvent> enrichedEvents = events.map((eventModel) {
+      final baseEventEntity = eventModel.toEntity();
+      String? resolvedTeamName = baseEventEntity.teamName;
 
-          // Se o evento não tem nome de time mas tem ID, tenta resolver usando os nomes dos times principais
-          if (resolvedTeamName == null && baseEventEntity.teamId != null) {
-            if (baseEventEntity.teamId == homeTeam.id) {
-              // homeTeam aqui é o TeamModel desta classe
-              resolvedTeamName = homeTeam.name;
-            } else if (baseEventEntity.teamId == awayTeam.id) {
-              // awayTeam aqui é o TeamModel desta classe
-              resolvedTeamName = awayTeam.name;
-            }
-          }
-          // Usa o método copyWith da entidade LiveGameEvent (que deve existir)
-          return baseEventEntity.copyWith(teamName: resolvedTeamName);
-        }).toList();
+      if (resolvedTeamName == null && baseEventEntity.teamId != null) {
+        if (baseEventEntity.teamId == homeTeam.id) {
+          // homeTeam é o TeamModel desta classe
+          resolvedTeamName = homeTeam.name;
+        } else if (baseEventEntity.teamId == awayTeam.id) {
+          // awayTeam é o TeamModel
+          resolvedTeamName = awayTeam.name;
+        }
+      }
+      return baseEventEntity.copyWith(teamName: resolvedTeamName);
+    }).toList();
 
     return LiveFixtureUpdate(
       fixtureId: fixtureId,
@@ -195,38 +189,40 @@ class LiveFixtureUpdateModel extends Equatable {
       statusShort: statusShort,
       elapsedMinutes: elapsedMinutes,
       leagueName: leagueName,
-      homeTeam: homeTeam.toEntity(), // Converte TeamModel para TeamInFixture
-      awayTeam: awayTeam.toEntity(), // Converte TeamModel para TeamInFixture
+      // ===== MAPEAMENTO CORRIGIDO PARA OS NOVOS CAMPOS DA ENTIDADE =====
+      homeTeamName: homeTeam.name, // Do this.homeTeam (TeamModel)
+      homeTeamLogoUrl: homeTeam.logoUrl, // Do this.homeTeam (TeamModel)
+      homeTeamId: homeTeam.id, // Do this.homeTeam (TeamModel)
+      awayTeamName: awayTeam.name, // Do this.awayTeam (TeamModel)
+      awayTeamLogoUrl: awayTeam.logoUrl, // Do this.awayTeam (TeamModel)
+      awayTeamId: awayTeam.id, // Do this.awayTeam (TeamModel)
+      // =============================================================
       homeScore: homeScore,
       awayScore: awayScore,
       events: enrichedEvents,
-      homeTeamLiveStats:
-          homeTeamLiveStats
-              ?.toEntity(), // Converte TeamLiveStatsDataModel para TeamLiveStats
-      awayTeamLiveStats:
-          awayTeamLiveStats
-              ?.toEntity(), // Converte TeamLiveStatsDataModel para TeamLiveStats
+      homeTeamLiveStats: homeTeamLiveStats?.toEntity(),
+      awayTeamLiveStats: awayTeamLiveStats?.toEntity(),
     );
   }
 
   @override
   List<Object?> get props => [
-    fixtureId, date, referee, timezone, venueName, venueCity,
-    statusLong, statusShort, elapsedMinutes,
-    leagueId,
-    leagueName,
-    leagueCountry,
-    leagueLogoUrl,
-    leagueFlagUrl,
-    seasonYear,
-    homeTeam, awayTeam, // TeamModel objects
-    homeScore, awayScore, halftimeHomeScore, halftimeAwayScore,
-    fulltimeHomeScore,
-    fulltimeAwayScore,
-    extratimeHomeScore,
-    extratimeAwayScore,
-    penaltyHomeScore, penaltyAwayScore,
-    events, lineupsRaw,
-    homeTeamLiveStats, awayTeamLiveStats,
-  ];
+        fixtureId, date, referee, timezone, venueName, venueCity,
+        statusLong, statusShort, elapsedMinutes,
+        leagueId,
+        leagueName,
+        leagueCountry,
+        leagueLogoUrl,
+        leagueFlagUrl,
+        seasonYear,
+        homeTeam, awayTeam, // TeamModel objects
+        homeScore, awayScore, halftimeHomeScore, halftimeAwayScore,
+        fulltimeHomeScore,
+        fulltimeAwayScore,
+        extratimeHomeScore,
+        extratimeAwayScore,
+        penaltyHomeScore, penaltyAwayScore,
+        events, lineupsRaw,
+        homeTeamLiveStats, awayTeamLiveStats,
+      ];
 }

@@ -1,22 +1,25 @@
 // lib/data/models/fixture_model.dart
 import 'package:equatable/equatable.dart';
 import 'package:product_gamers/domain/entities/entities/fixture.dart';
-import 'team_model.dart'; // Assume que TeamModel já existe e está correto
-// Será criado em breve
+import 'package:product_gamers/domain/entities/entities/fixture_league_info_entity.dart';
+import 'team_model.dart';
+// Import da entidade Fixture e da nova FixtureLeagueInfoEntity
+// Garanta este import
 
-// --- INÍCIO DOS SUB-MODELOS ---
+// --- SUB-MODELOS (VenueModel, StatusModel, FixtureLeagueInfoModel, ScoreInfoModel) ---
+// Cole aqui as definições de VenueModel, StatusModel, FixtureLeagueInfoModel, ScoreInfoModel
+// como fornecidas na resposta "Ok, vamos para o FixtureModel. Este modelo é central..."
+// Eles não devem ter mudado. Vou colocar apenas a estrutura deles para referência:
+
 class VenueModel extends Equatable {
   final int? id;
   final String? name;
   final String? city;
   const VenueModel({this.id, this.name, this.city});
-  factory VenueModel.fromJson(Map<String, dynamic> json) {
-    return VenueModel(
-        id: json['id'] as int?,
-        name: json['name'] as String?,
-        city: json['city'] as String?);
-  }
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'city': city};
+  factory VenueModel.fromJson(Map<String, dynamic> json) => VenueModel(
+      id: json['id'] as int?,
+      name: json['name'] as String?,
+      city: json['city'] as String?);
   @override
   List<Object?> get props => [id, name, city];
 }
@@ -26,20 +29,16 @@ class StatusModel extends Equatable {
   final String? shortName;
   final int? elapsedMinutes;
   const StatusModel({this.longName, this.shortName, this.elapsedMinutes});
-  factory StatusModel.fromJson(Map<String, dynamic> json) {
-    return StatusModel(
+  factory StatusModel.fromJson(Map<String, dynamic> json) => StatusModel(
       longName: json['long'] as String?,
       shortName: json['short'] as String?,
-      elapsedMinutes: json['elapsed'] as int?,
-    );
-  }
-  Map<String, dynamic> toJson() =>
-      {'long': longName, 'short': shortName, 'elapsed': elapsedMinutes};
+      elapsedMinutes: json['elapsed'] as int?);
   @override
   List<Object?> get props => [longName, shortName, elapsedMinutes];
 }
 
 class FixtureLeagueInfoModel extends Equatable {
+  // Este é o MODELO para dados da liga DENTRO do fixture
   final int id;
   final String name;
   final String? country;
@@ -55,26 +54,28 @@ class FixtureLeagueInfoModel extends Equatable {
       this.flagUrl,
       this.season,
       this.round});
-  factory FixtureLeagueInfoModel.fromJson(Map<String, dynamic> json) {
-    return FixtureLeagueInfoModel(
-      id: json['id'] as int? ?? 0,
-      name: json['name'] as String? ?? 'Liga Desconhecida',
-      country: json['country'] as String?,
-      logoUrl: json['logo'] as String?,
-      flagUrl: json['flag'] as String?,
-      season: json['season'] as int?,
-      round: json['round'] as String?,
-    );
+  factory FixtureLeagueInfoModel.fromJson(Map<String, dynamic> json) =>
+      FixtureLeagueInfoModel(
+        id: json['id'] as int? ?? 0,
+        name: json['name'] as String? ?? 'Liga Desconhecida',
+        country: json['country'] as String?,
+        logoUrl: json['logo'] as String?,
+        flagUrl: json['flag'] as String?,
+        season: json['season'] as int?,
+        round: json['round'] as String?,
+      );
+  // Método para converter este MODELO para a ENTIDADE FixtureLeagueInfoEntity
+  FixtureLeagueInfoEntity toEntity() {
+    return FixtureLeagueInfoEntity(
+        id: id,
+        name: name,
+        country: country,
+        logoUrl: logoUrl,
+        flagUrl: flagUrl,
+        season: season,
+        round: round);
   }
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'country': country,
-        'logo': logoUrl,
-        'flag': flagUrl,
-        'season': season,
-        'round': round
-      };
+
   @override
   List<Object?> get props =>
       [id, name, country, logoUrl, flagUrl, season, round];
@@ -98,19 +99,16 @@ class ScoreInfoModel extends Equatable {
       this.extratimeAway,
       this.penaltyHome,
       this.penaltyAway});
-  factory ScoreInfoModel.fromJson(Map<String, dynamic> json) {
-    return ScoreInfoModel(
-      halftimeHome: json['halftime']?['home'] as int?,
-      halftimeAway: json['halftime']?['away'] as int?,
-      fulltimeHome: json['fulltime']?['home'] as int?,
-      fulltimeAway: json['fulltime']?['away'] as int?,
-      extratimeHome: json['extratime']?['home'] as int?,
-      extratimeAway: json['extratime']?['away'] as int?,
-      penaltyHome: json['penalty']?['home'] as int?,
-      penaltyAway: json['penalty']?['away'] as int?,
-    );
-  }
-  Map<String, dynamic> toJson() => {/* ... preencher se necessário ... */};
+  factory ScoreInfoModel.fromJson(Map<String, dynamic> json) => ScoreInfoModel(
+        halftimeHome: json['halftime']?['home'] as int?,
+        halftimeAway: json['halftime']?['away'] as int?,
+        fulltimeHome: json['fulltime']?['home'] as int?,
+        fulltimeAway: json['fulltime']?['away'] as int?,
+        extratimeHome: json['extratime']?['home'] as int?,
+        extratimeAway: json['extratime']?['away'] as int?,
+        penaltyHome: json['penalty']?['home'] as int?,
+        penaltyAway: json['penalty']?['away'] as int?,
+      );
   @override
   List<Object?> get props => [
         halftimeHome,
@@ -128,17 +126,17 @@ class ScoreInfoModel extends Equatable {
 // Modelo Principal da Partida
 class FixtureModel extends Equatable {
   final int id;
-  final String? refereeNameFromFixture; // Nome do árbitro como string da API
+  final String? refereeNameFromFixture;
   final String timezone;
   final DateTime date;
   final int? timestamp;
   final VenueModel venue;
   final StatusModel status;
-  final FixtureLeagueInfoModel league;
+  final FixtureLeagueInfoModel league; // Este é o MODELO FixtureLeagueInfoModel
   final TeamModel homeTeam;
   final TeamModel awayTeam;
-  final int? homeGoals; // Gols atuais/finais
-  final int? awayGoals; // Gols atuais/finais
+  final int? homeGoals;
+  final int? awayGoals;
   final ScoreInfoModel score;
 
   const FixtureModel({
@@ -149,7 +147,7 @@ class FixtureModel extends Equatable {
     this.timestamp,
     required this.venue,
     required this.status,
-    required this.league,
+    required this.league, // Recebe FixtureLeagueInfoModel
     required this.homeTeam,
     required this.awayTeam,
     this.homeGoals,
@@ -176,7 +174,8 @@ class FixtureModel extends Equatable {
       status: StatusModel.fromJson(
           fixtureData['status'] as Map<String, dynamic>? ?? {}),
       league: FixtureLeagueInfoModel.fromJson(
-          leagueData as Map<String, dynamic>? ?? {}),
+          leagueData as Map<String, dynamic>? ??
+              {}), // Cria FixtureLeagueInfoModel
       homeTeam:
           TeamModel.fromJson(teamsData['home'] as Map<String, dynamic>? ?? {}),
       awayTeam:
@@ -187,19 +186,23 @@ class FixtureModel extends Equatable {
     );
   }
 
+  // MÉTODO toEntity CORRIGIDO
   Fixture toEntity() {
     return Fixture(
+      // Chamando o construtor da ENTIDADE Fixture
       id: id,
       date: date,
       statusShort: status.shortName ?? 'N/A',
       statusLong: status.longName ?? 'Status Desconhecido',
-      homeTeam: homeTeam.toEntity(),
-      awayTeam: awayTeam.toEntity(),
+      homeTeam:
+          homeTeam.toEntity(), // TeamModel.toEntity() retorna TeamInFixture
+      awayTeam:
+          awayTeam.toEntity(), // TeamModel.toEntity() retorna TeamInFixture
       homeGoals: homeGoals,
       awayGoals: awayGoals,
-      leagueId: league.id,
-      leagueName: league.name,
-      leagueLogoUrl: league.logoUrl,
+      league: league
+          .toEntity(), // <--- AQUI: this.league (FixtureLeagueInfoModel) chama seu próprio toEntity()
+      // que retorna FixtureLeagueInfoEntity.
       refereeName: refereeNameFromFixture,
       venueName: venue.name,
       elapsedMinutes: status.elapsedMinutes,

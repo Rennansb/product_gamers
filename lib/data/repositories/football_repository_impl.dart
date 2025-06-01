@@ -4,11 +4,13 @@ import 'package:product_gamers/core/config/failure.dart';
 import 'package:product_gamers/domain/entities/entities/fixture.dart';
 import 'package:product_gamers/domain/entities/entities/fixture_stats.dart';
 import 'package:product_gamers/domain/entities/entities/league.dart';
+import 'package:product_gamers/domain/entities/entities/lineup.dart';
 import 'package:product_gamers/domain/entities/entities/live_fixture_update.dart';
 import 'package:product_gamers/domain/entities/entities/player_stats.dart';
 import 'package:product_gamers/domain/entities/entities/prognostic_market.dart';
 import 'package:product_gamers/domain/entities/entities/referee_stats.dart';
 import 'package:product_gamers/domain/entities/entities/standing_info.dart';
+import 'package:product_gamers/domain/entities/entities/team_aggregated_stats.dart';
 
 // Core
 import '../../core/config/app_constants.dart'; // Usado para AppConstants.preferredBookmakerId
@@ -26,21 +28,14 @@ import '../datasources/football_remote_datasource.dart'; // A interface do DataS
 import '../../domain/repositories/football_repository.dart';
 
 class FootballRepositoryImpl implements FootballRepository {
-  final FootballRemoteDataSource
-      remoteDataSource; // CORREÇÃO: Adicionar declaração da dependência
+  final FootballRemoteDataSource remoteDataSource;
 
-  // CONSTRUTOR CORRIGIDO: usa parâmetro nomeado 'remoteDataSource'
   FootballRepositoryImpl({
     required this.remoteDataSource,
   });
 
-  // MÉTODO HELPER _tryCatch (ESSENCIAL)
   Future<Either<Failure, T>> _tryCatch<T>(
       Future<T> Function() remoteCall) async {
-    // Adicionar verificação de conectividade aqui se tiver NetworkInfo
-    // if (!await networkInfo.isConnected) {
-    //   return Left(NetworkFailure(message: 'Sem conexão com a internet.'));
-    // }
     try {
       final T result = await remoteCall();
       return Right(result);
@@ -59,7 +54,6 @@ class FootballRepositoryImpl implements FootballRepository {
       return Left(
           NoDataFailure(message: e.message ?? 'Nenhum dado encontrado.'));
     } on CacheException catch (e) {
-      // Se usarmos cache no futuro
       return Left(
           CacheFailure(message: e.message ?? 'Erro ao acessar o cache.'));
     } catch (e) {
@@ -86,8 +80,8 @@ class FootballRepositoryImpl implements FootballRepository {
   }) async {
     return _tryCatch<List<Fixture>>(() async {
       final fixtureModels = await remoteDataSource.getFixturesForLeague(
-        leagueId, // Passando como posicional
-        season, // Passando como posicional
+        leagueId,
+        season,
         nextGames: nextGames,
       );
       return fixtureModels.map((model) => model.toEntity()).toList();
@@ -101,7 +95,7 @@ class FootballRepositoryImpl implements FootballRepository {
   }) async {
     return _tryCatch<List<PrognosticMarket>>(() async {
       final oddsResponseModel = await remoteDataSource.getOddsForFixture(
-        fixtureId, // Passando como posicional
+        fixtureId,
         bookmakerId: bookmakerId ?? AppConstants.preferredBookmakerId,
       );
       return oddsResponseModel.toEntityList(
@@ -117,7 +111,7 @@ class FootballRepositoryImpl implements FootballRepository {
   }) async {
     return _tryCatch<List<PrognosticMarket>>(() async {
       final oddsResponseModel = await remoteDataSource.fetchLiveOddsForFixture(
-        fixtureId, // Passando como posicional
+        fixtureId,
         bookmakerId: bookmakerId ?? AppConstants.preferredBookmakerId,
       );
       return oddsResponseModel.toEntityList(
@@ -133,11 +127,12 @@ class FootballRepositoryImpl implements FootballRepository {
     required int awayTeamId,
   }) async {
     return _tryCatch<FixtureStatsEntity?>(() async {
+      // Retorno pode ser nulo
       final model = await remoteDataSource.getFixtureStatistics(
           fixtureId: fixtureId, homeTeamId: homeTeamId, awayTeamId: awayTeamId);
-      // FixtureStatisticsResponseModel.toEntity() retorna FixtureStatsEntity, não anulável.
-      // A nulidade de T? em _tryCatch é para casos onde a própria chamada pode retornar nulo,
-      // ou se o toEntity pudesse retornar nulo.
+      // O modelo FixtureStatisticsResponseModel em si não é nulo, mas seus campos home/away podem ser.
+      // O toEntity criará um FixtureStatsEntity, que pode ter homeTeam/awayTeam nulos.
+      // Se o próprio modelo da resposta fosse anulável no datasource, faríamos model?.toEntity()
       return model.toEntity(fixtureId);
     });
   }
@@ -174,7 +169,7 @@ class FootballRepositoryImpl implements FootballRepository {
     return _tryCatch<PlayerSeasonStats?>(() async {
       final model = await remoteDataSource.getPlayerStats(
           playerId: playerId, season: season);
-      return model?.toEntity(); // Usa ?. pois o model pode ser nulo
+      return model?.toEntity();
     });
   }
 
@@ -199,10 +194,7 @@ class FootballRepositoryImpl implements FootballRepository {
     return _tryCatch<RefereeStats?>(() async {
       final model = await remoteDataSource.getRefereeDetailsAndAggregateStats(
           refereeId: refereeId, season: season);
-      // Se o model for nulo (ex: árbitro não encontrado), toEntity() não deve ser chamado.
-      // A assinatura de getRefereeDetailsAndAggregateStats no DataSource retorna RefereeStatsModel (não anulável)
-      // mas a lógica interna pode ter falhas que resultem em um estado onde seria melhor retornar nulo.
-      // No entanto, para consistência, assumimos que o DataSource lança exceção ou retorna modelo válido.
+      // O model RefereeStatsModel não é anulável, mas suas seasonStats podem ser vazias.
       return model.toEntity(season);
     });
   }
@@ -215,8 +207,7 @@ class FootballRepositoryImpl implements FootballRepository {
     return _tryCatch<List<StandingInfo>>(() async {
       final model = await remoteDataSource.getLeagueStandings(
           leagueId: leagueId, season: season);
-      if (model == null)
-        return []; // Se o DataSource retornar nulo (ex: liga não encontrada)
+      if (model == null) return [];
       return model.toEntityList();
     });
   }
@@ -226,19 +217,59 @@ class FootballRepositoryImpl implements FootballRepository {
       int fixtureId) async {
     return _tryCatch<LiveFixtureUpdate?>(() async {
       final model = await remoteDataSource.fetchLiveFixtureUpdate(fixtureId);
-      // Assumindo que fetchLiveFixtureUpdate no DataSource retorna LiveFixtureUpdateModel (não anulável)
-      // e lança exceção em caso de erro.
+      // O model LiveFixtureUpdateModel não é anulável.
       return model.toEntity();
     });
   }
 
-  // NOVO MÉTODO IMPLEMENTADO
   @override
   Future<Either<Failure, List<RefereeBasicInfo>>> searchRefereeByName(
       {required String name}) async {
     return _tryCatch<List<RefereeBasicInfo>>(() async {
       final models = await remoteDataSource.searchRefereeByName(name: name);
       return models.map((model) => model.toEntity()).toList();
+    });
+  }
+
+  // ===== NOVAS IMPLEMENTAÇÕES FALTANTES ADICIONADAS ABAIXO =====
+  @override
+  Future<Either<Failure, LineupsForFixture?>> getFixtureLineups({
+    required int fixtureId,
+    required int homeTeamId,
+    required int awayTeamId,
+  }) async {
+    return _tryCatch<LineupsForFixture?>(() async {
+      final model = await remoteDataSource.getFixtureLineups(
+          fixtureId: fixtureId, homeTeamId: homeTeamId, awayTeamId: awayTeamId);
+      return model
+          ?.toEntity(); // Usa ?. pois o model do DataSource pode ser nulo
+    });
+  }
+
+  @override
+  Future<Either<Failure, TeamAggregatedStats?>> getTeamSeasonAggregatedStats({
+    required int teamId,
+    required int leagueId,
+    required String season,
+  }) async {
+    return _tryCatch<TeamAggregatedStats?>(() async {
+      final model = await remoteDataSource.getTeamSeasonAggregatedStats(
+          teamId: teamId, leagueId: leagueId, season: season);
+      return model
+          ?.toEntity(); // Usa ?. pois o model do DataSource pode ser nulo
+    });
+  }
+
+  @override
+  Future<Either<Failure, List<Fixture>>> getTeamRecentFixtures({
+    required int teamId,
+    int lastN = 5,
+    String? status,
+  }) async {
+    return _tryCatch<List<Fixture>>(() async {
+      final fixtureModels = await remoteDataSource.getTeamRecentFixtures(
+          teamId: teamId, lastN: lastN, status: status);
+      return fixtureModels.map((model) => model.toEntity()).toList();
     });
   }
 }

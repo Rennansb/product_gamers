@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:product_gamers/domain/usecases/get_fixture_lineups_usecase.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -40,90 +41,62 @@ import 'presentation/providers/suggested_slips_provider.dart';
 // FixtureProvider, FixtureDetailProvider, LiveFixtureProvider serão criados dinamicamente
 import 'presentation/screens/home_screen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
-  await initializeDateFormatting('pt_BR', null);
+// lib/main.dart
+// ... (imports para todos os use cases)
 
-  // --- Injeção de Dependência Manual Simples ---
+void main() async {
+  // ... (inicialização)
+
   final httpClient = http.Client();
-  // DataSource
   final FootballRemoteDataSource remoteDataSource =
       FootballRemoteDataSourceImpl(client: httpClient);
-  // Repository
   final FootballRepository footballRepository =
       FootballRepositoryImpl(remoteDataSource: remoteDataSource);
-
-  // Instanciando TODOS os UseCases que podem ser necessários globalmente ou para providers iniciais
+  final getFixtureLineupsUseCase = GetFixtureLineupsUseCase(footballRepository);
+  // USE CASES (garanta que todos estes existem e estão instanciados)
   final getLeaguesUseCase = GetLeaguesUseCase(footballRepository);
   final getFixturesUseCase = GetFixturesUseCase(footballRepository);
-  final getOddsUseCase = GetOddsUseCase(footballRepository);
-  final getFixtureStatisticsUseCase =
-      GetFixtureStatisticsUseCase(footballRepository);
-  final getH2HUseCase = GetH2HUseCase(footballRepository);
-  final getLeagueStandingsUseCase =
-      GetLeagueStandingsUseCase(footballRepository);
-  final getPlayerStatsUseCase =
-      GetPlayerStatsUseCase(footballRepository); // Para jogador individual
+  final getOddsUseCase =
+      GetOddsUseCase(footballRepository); // Para FixtureDetailProvider
+  final getFixtureStatisticsUseCase = GetFixtureStatisticsUseCase(
+      footballRepository); // Para FixtureDetailProvider
+  final getH2HUseCase =
+      GetH2HUseCase(footballRepository); // Para FixtureDetailProvider
+  final getLiveFixtureUpdateUseCase = GetLiveFixtureUpdateUseCase(
+      footballRepository); // Para LiveFixtureProvider
+  final getLiveOddsUseCase =
+      GetLiveOddsUseCase(footballRepository); // Para LiveFixtureProvider
+  // ... (outros use cases como generateSuggestedSlipsUseCase, etc., que já devem estar lá)
 
-  final getRefereeStatsUseCase = GetRefereeStatsUseCase(footballRepository);
-
-  final getLiveFixtureUpdateUseCase =
-      GetLiveFixtureUpdateUseCase(footballRepository);
-  final getLiveOddsUseCase = GetLiveOddsUseCase(footballRepository);
-  // final getTeamRecentFixturesUseCase = GetTeamRecentFixturesUseCase(footballRepository); // Se criado
-
-  // Defina ou importe o oddsCalculator antes de usá-lo
-
-  // GenerateSuggestedSlipsUseCase (Opção A: recebe só o repo e cria sub-usecases internamente)
-  final generateSuggestedSlipsUseCase =
-      GenerateSuggestedSlipsUseCase(footballRepository);
   runApp(
     MultiProvider(
       providers: [
-        // --- Prover todos os UseCases para que possam ser lidos por Providers/Widgets ---
-        // Isso é útil para providers criados dinamicamente (ex: em rotas de navegação)
-        // ou para providers que dependem de múltiplos use cases.
+        // Prover TODOS os use cases
+        Provider<GetFixtureLineupsUseCase>.value(
+            value: getFixtureLineupsUseCase),
         Provider<GetLeaguesUseCase>.value(value: getLeaguesUseCase),
         Provider<GetFixturesUseCase>.value(value: getFixturesUseCase),
         Provider<GetOddsUseCase>.value(value: getOddsUseCase),
         Provider<GetFixtureStatisticsUseCase>.value(
             value: getFixtureStatisticsUseCase),
         Provider<GetH2HUseCase>.value(value: getH2HUseCase),
-        Provider<GetLeagueStandingsUseCase>.value(
-            value: getLeagueStandingsUseCase),
-        Provider<GetPlayerStatsUseCase>.value(value: getPlayerStatsUseCase),
-
-        Provider<GetRefereeStatsUseCase>.value(value: getRefereeStatsUseCase),
-
-        Provider<GenerateSuggestedSlipsUseCase>.value(
-            value: generateSuggestedSlipsUseCase),
         Provider<GetLiveFixtureUpdateUseCase>.value(
             value: getLiveFixtureUpdateUseCase),
         Provider<GetLiveOddsUseCase>.value(value: getLiveOddsUseCase),
-        // Provider<GetTeamRecentFixturesUseCase>.value(value: getTeamRecentFixturesUseCase), // Se criado
+        // ... (prover outros use cases)
 
-        // --- Providers de Estado (ChangeNotifiers) ---
+        // Providers de Estado Iniciais
         ChangeNotifierProvider(
           create: (context) =>
               LeagueProvider(context.read<GetLeaguesUseCase>()),
         ),
-        ChangeNotifierProvider(
-          create: (context) => SuggestedSlipsProvider(
-            // SuggestedSlipsProvider precisa de GetFixturesUseCase para buscar os jogos do dia
-            // e GenerateSuggestedSlipsUseCase para criar os bilhetes.
-            context.read<GetFixturesUseCase>(),
-            context.read<GenerateSuggestedSlipsUseCase>(),
-          ),
-        ),
-        // Outros providers como FixtureProvider, FixtureDetailProvider, LiveFixtureProvider
-        // serão criados "on-the-fly" (dinamicamente) durante a navegação,
-        // usando os UseCases providos acima através de context.read<UseCaseType>().
+        // ... (SuggestedSlipsProvider, etc.)
       ],
       child: const MyApp(),
     ),
   );
 }
+// ... (MyApp)
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

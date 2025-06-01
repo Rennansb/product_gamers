@@ -1,8 +1,7 @@
 // lib/domain/entities/live_fixture_update.dart
 import 'package:equatable/equatable.dart';
-import 'team.dart'; // <<< IMPORTAR TeamInFixture
 
-// LiveGameEvent e TeamLiveStats como antes...
+// LiveGameEvent e TeamLiveStats permanecem como definidos anteriormente
 class LiveGameEvent extends Equatable {
   final int? timeElapsed;
   final int? timeExtra;
@@ -30,49 +29,37 @@ class LiveGameEvent extends Equatable {
     this.comments,
   });
 
-  LiveGameEvent copyWith({
-    int? timeElapsed,
-    int? timeExtra,
-    int? teamId,
-    String? teamName,
-    int? playerId,
-    String? playerName,
-    int? assistPlayerId,
-    String? assistPlayerName,
-    String? type,
-    String? detail,
-    String? comments,
-    bool? clearComments,
-  }) {
+  LiveGameEvent copyWith({String? teamName}) {
+    // Assegurar que este copyWith existe
     return LiveGameEvent(
-      timeElapsed: timeElapsed ?? this.timeElapsed,
-      timeExtra: timeExtra ?? this.timeExtra,
-      teamId: teamId ?? this.teamId,
+      timeElapsed: timeElapsed,
+      timeExtra: timeExtra,
+      teamId: teamId,
       teamName: teamName ?? this.teamName,
-      playerId: playerId ?? this.playerId,
-      playerName: playerName ?? this.playerName,
-      assistPlayerId: assistPlayerId ?? this.assistPlayerId,
-      assistPlayerName: assistPlayerName ?? this.assistPlayerName,
-      type: type ?? this.type,
-      detail: detail ?? this.detail,
-      comments: (clearComments == true) ? null : (comments ?? this.comments),
+      playerId: playerId,
+      playerName: playerName,
+      assistPlayerId: assistPlayerId,
+      assistPlayerName: assistPlayerName,
+      type: type,
+      detail: detail,
+      comments: comments,
     );
   }
 
   @override
   List<Object?> get props => [
-    timeElapsed,
-    timeExtra,
-    teamId,
-    teamName,
-    playerId,
-    playerName,
-    assistPlayerId,
-    assistPlayerName,
-    type,
-    detail,
-    comments,
-  ];
+        timeElapsed,
+        timeExtra,
+        teamId,
+        teamName,
+        playerId,
+        playerName,
+        assistPlayerId,
+        assistPlayerName,
+        type,
+        detail,
+        comments
+      ];
 }
 
 class TeamLiveStats extends Equatable {
@@ -86,7 +73,6 @@ class TeamLiveStats extends Equatable {
   final int? redCards;
   final String? ballPossession;
   final double? expectedGoalsLive;
-
   const TeamLiveStats({
     this.shotsOnGoal,
     this.shotsOffGoal,
@@ -99,22 +85,23 @@ class TeamLiveStats extends Equatable {
     this.ballPossession,
     this.expectedGoalsLive,
   });
-
   @override
   List<Object?> get props => [
-    shotsOnGoal,
-    shotsOffGoal,
-    totalShots,
-    blockedShots,
-    corners,
-    fouls,
-    yellowCards,
-    redCards,
-    ballPossession,
-    expectedGoalsLive,
-  ];
+        shotsOnGoal,
+        shotsOffGoal,
+        totalShots,
+        blockedShots,
+        corners,
+        fouls,
+        yellowCards,
+        redCards,
+        ballPossession,
+        expectedGoalsLive
+      ];
 }
+// FIM DE LiveGameEvent e TeamLiveStats
 
+// Entidade principal para a atualização ao vivo de um fixture
 class LiveFixtureUpdate extends Equatable {
   final int fixtureId;
   final DateTime date;
@@ -122,10 +109,17 @@ class LiveFixtureUpdate extends Equatable {
   final String? statusLong;
   final String? statusShort;
   final int? elapsedMinutes;
-  final String? leagueName;
 
-  final TeamInFixture homeTeam;
-  final TeamInFixture awayTeam;
+  final String? leagueName; // Nome da liga
+
+  // ===== CAMPOS ADICIONADOS/CORRIGIDOS =====
+  final String homeTeamName;
+  final String? homeTeamLogoUrl;
+  final int homeTeamId;
+  final String awayTeamName;
+  final String? awayTeamLogoUrl;
+  final int awayTeamId; // Adicionar ID
+  // =======================================
 
   final int? homeScore;
   final int? awayScore;
@@ -134,7 +128,6 @@ class LiveFixtureUpdate extends Equatable {
   final TeamLiveStats? homeTeamLiveStats;
   final TeamLiveStats? awayTeamLiveStats;
 
-  // === CORREÇÃO NO CONSTRUTOR ===
   const LiveFixtureUpdate({
     required this.fixtureId,
     required this.date,
@@ -143,22 +136,28 @@ class LiveFixtureUpdate extends Equatable {
     this.statusShort,
     this.elapsedMinutes,
     this.leagueName,
-    required this.homeTeam, // Mantém como posicional obrigatório (já que é TeamInFixture)
-    required this.awayTeam, // Mantém como posicional obrigatório
+    // ===== PARÂMETROS ADICIONADOS/CORRIGIDOS NO CONSTRUTOR =====
+    required this.homeTeamName,
+    this.homeTeamLogoUrl,
+    required this.homeTeamId,
+    required this.awayTeamName,
+    this.awayTeamLogoUrl,
+    required this.awayTeamId,
+    // =========================================================
     this.homeScore,
     this.awayScore,
     required this.events,
     this.homeTeamLiveStats,
     this.awayTeamLiveStats,
   });
-  // ============================
 
   @override
   List<Object?> get props => [
-    fixtureId, date, statusShort, elapsedMinutes,
-    homeTeam, awayTeam, // Adicionar aos props
-    homeScore, awayScore,
-    events,
-    homeTeamLiveStats, awayTeamLiveStats,
-  ];
+        fixtureId, date, statusShort, elapsedMinutes,
+        leagueName,
+        homeTeamName, homeTeamLogoUrl, homeTeamId, // Adicionado
+        awayTeamName, awayTeamLogoUrl, awayTeamId, // Adicionado
+        homeScore, awayScore,
+        events, homeTeamLiveStats, awayTeamLiveStats
+      ];
 }

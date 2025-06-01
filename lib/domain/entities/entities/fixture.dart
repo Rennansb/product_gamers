@@ -1,6 +1,7 @@
 // lib/domain/entities/fixture.dart
 import 'package:equatable/equatable.dart';
-import 'team.dart'; // Importa TeamInFixture (que deve estar em lib/domain/entities/team.dart)
+import 'team.dart'; // Contém TeamInFixture
+import 'fixture_league_info_entity.dart'; // Importa a entidade para informações da liga
 
 class Fixture extends Equatable {
   final int id;
@@ -11,9 +12,10 @@ class Fixture extends Equatable {
   final TeamInFixture awayTeam;
   final int? homeGoals;
   final int? awayGoals;
-  final int leagueId;
-  final String leagueName;
-  final String? leagueLogoUrl;
+
+  // ESTE É O CAMPO CORRETO PARA INFORMAÇÕES DA LIGA
+  final FixtureLeagueInfoEntity league;
+
   final String? refereeName;
   final String? venueName;
   final int? elapsedMinutes;
@@ -22,6 +24,7 @@ class Fixture extends Equatable {
   final int? fulltimeHomeScore;
   final int? fulltimeAwayScore;
 
+  // CONSTRUTOR CORRETO DA ENTIDADE
   const Fixture({
     required this.id,
     required this.date,
@@ -31,9 +34,7 @@ class Fixture extends Equatable {
     required this.awayTeam,
     this.homeGoals,
     this.awayGoals,
-    required this.leagueId,
-    required this.leagueName,
-    this.leagueLogoUrl,
+    required this.league, // <--- DEVE SER 'league', NÃO 'leagueId', 'leagueName', etc.
     this.refereeName,
     this.venueName,
     this.elapsedMinutes,
@@ -45,23 +46,11 @@ class Fixture extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        date,
-        statusShort,
-        statusLong,
-        homeTeam,
-        awayTeam,
-        homeGoals,
+        id, date, statusShort, statusLong, homeTeam, awayTeam, homeGoals,
         awayGoals,
-        leagueId,
-        leagueName,
-        leagueLogoUrl,
-        refereeName,
-        venueName,
-        elapsedMinutes,
-        halftimeHomeScore,
-        halftimeAwayScore,
-        fulltimeHomeScore,
+        league, // <--- 'league' EM PROPS
+        refereeName, venueName, elapsedMinutes,
+        halftimeHomeScore, halftimeAwayScore, fulltimeHomeScore,
         fulltimeAwayScore,
       ];
 }

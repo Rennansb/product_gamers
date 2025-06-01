@@ -16,7 +16,7 @@ import '../widgets/common/error_display_widget.dart';
 // import '../widgets/market_odds_widget.dart'; // Descomente se for exibir odds ao vivo com este widget
 
 class LiveFixtureScreen extends StatelessWidget {
-  final Fixture fixtureBasicInfo;
+  final Fixture fixtureBasicInfo; // Este é o Fixture com a estrutura atualizada
 
   const LiveFixtureScreen({super.key, required this.fixtureBasicInfo});
 
@@ -25,29 +25,28 @@ class LiveFixtureScreen extends StatelessWidget {
     final liveProvider = context.watch<LiveFixtureProvider>();
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    // Nomes dos times com fallback para fixtureBasicInfo se liveData ainda for nulo
-    String appBarHomeName =
-        liveProvider.liveData?.homeTeam.name ?? fixtureBasicInfo.homeTeam.name;
-    String appBarAwayName =
-        liveProvider.liveData?.awayTeam.name ?? fixtureBasicInfo.awayTeam.name;
-    String appBarLeagueName =
-        liveProvider.liveData?.leagueName ?? fixtureBasicInfo.leagueName;
-
     return Scaffold(
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "$appBarHomeName vs $appBarAwayName",
-              style: const TextStyle(fontSize: 17),
+              "${fixtureBasicInfo.homeTeam.name} vs ${fixtureBasicInfo.awayTeam.name} (Ao Vivo)",
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500), // Ajuste de tamanho
               overflow: TextOverflow.ellipsis,
             ),
+            // ===== CORREÇÃO AQUI =====
             Text(
-              appBarLeagueName,
-              style: const TextStyle(fontSize: 12, color: Colors.white70),
+              liveProvider.liveData?.leagueName ??
+                  fixtureBasicInfo.league
+                      .name, // Usar liveData se disponível, senão o baseFixture.league.name
+              style: const TextStyle(
+                  fontSize: 11, color: Colors.white70), // Ajuste de tamanho
               overflow: TextOverflow.ellipsis,
             ),
+            // ===========================
           ],
         ),
         actions: [
@@ -56,7 +55,7 @@ class LiveFixtureScreen extends StatelessWidget {
               liveProvider.status == LiveFixturePollingStatus.finished)
             IconButton(
               icon: const Icon(Icons.refresh),
-              tooltip: "Atualizar dados",
+              tooltip: "Atualizar Dados Ao Vivo",
               onPressed: () => liveProvider.forceRefresh(),
             ),
         ],
@@ -65,17 +64,84 @@ class LiveFixtureScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildLiveInsightsSection(
+      BuildContext context, List<LiveGameInsight> insights) {
+    if (insights.isEmpty) {
+      // Você pode optar por não mostrar nada ou uma mensagem sutil
+      return const SizedBox.shrink();
+      // Ou:
+      // return Padding(
+      //   padding: const EdgeInsets.symmetric(vertical: 16.0),
+      //   child: Center(child: Text("Nenhum insight especial no momento.", style: Theme.of(context).textTheme.bodySmall)),
+      // );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          // Ajuste no estilo do título para ser consistente com outros títulos de seção
+          child: Text("Insights Ao Vivo 🔥",
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold)),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: insights
+              .length, // Já está ordenado (mais recente primeiro no provider)
+          itemBuilder: (ctx, index) {
+            final insight = insights[index];
+            return Card(
+              elevation: 1,
+              margin: const EdgeInsets.only(bottom: 8),
+              color: insight.iconColor?.withOpacity(0.12) ??
+                  Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10), // Borda mais suave
+                  side: BorderSide(
+                      color: insight.iconColor?.withOpacity(0.5) ??
+                          Colors.transparent,
+                      width: 1)),
+              child: ListTile(
+                leading: insight.icon != null
+                    ? Icon(insight.icon,
+                        color: insight.iconColor ??
+                            Theme.of(context).colorScheme.primary,
+                        size: 30) // Ícone um pouco maior
+                    : null,
+                title: Text(insight.description,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w500)),
+                subtitle: Text(
+                  "Detectado: ${DateFormat.Hm('pt_BR').format(insight.timestamp.toLocal())}${insight.relatedTeamName != null ? ' - Ref: ${insight.relatedTeamName}' : ''}",
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelSmall
+                      ?.copyWith(fontSize: 11),
+                ),
+                dense: true,
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _buildLiveContent(
-    BuildContext context,
-    LiveFixtureProvider provider,
-    bool isDarkMode,
-  ) {
+      BuildContext context, LiveFixtureProvider provider, bool isDarkMode) {
     switch (provider.status) {
       case LiveFixturePollingStatus.initial:
       case LiveFixturePollingStatus.loadingFirst:
         return const LoadingIndicatorWidget(
-          message: "Carregando dados ao vivo...",
-        );
+            message: "Carregando dados ao vivo...");
       case LiveFixturePollingStatus.error:
         return ErrorDisplayWidget(
           message: provider.errorMessage ?? "Falha ao carregar dados ao vivo.",
@@ -85,23 +151,19 @@ class LiveFixtureScreen extends StatelessWidget {
       case LiveFixturePollingStatus.finished:
         if (provider.liveData == null) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("Aguardando dados do jogo..."),
-                const SizedBox(height: 10),
-                if (provider.errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Text(
-                      provider.errorMessage!,
-                      style: TextStyle(color: Colors.red[700], fontSize: 12),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-              ],
-            ),
-          );
+              child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text("Aguardando dados do jogo..."),
+              const SizedBox(height: 10),
+              if (provider.errorMessage != null)
+                Text(
+                  provider.errorMessage!,
+                  style: TextStyle(color: Colors.red[700], fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+            ],
+          ));
         }
         final liveData = provider.liveData!;
         return RefreshIndicator(
@@ -109,50 +171,51 @@ class LiveFixtureScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(0),
             children: [
-              _buildScoreboard(context, liveData, isDarkMode),
-              const SizedBox(height: 20),
+              _buildScoreboard(context, liveData, fixtureBasicInfo,
+                  isDarkMode), // Passa fixtureBasicInfo para fallback de logos
+              const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: _buildLiveInsightsSection(
-                  context,
-                  provider.liveInsights,
-                ),
+                child: _buildLiveInsightsSection(context,
+                    provider.liveInsights), // Mantido da Fase de Insights
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: _buildLiveSuggestionsSection(
-                  context,
-                  provider.liveSuggestions,
-                  liveData,
-                ),
+                child: _buildEventsList(
+                    context, liveData), // Passar liveData para nomes de times
               ),
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: _buildEventsList(context, liveData, isDarkMode),
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: _buildLiveStatsSection(context, liveData),
               ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: _buildLiveSuggestionsSection(
+                    context,
+                    provider.liveSuggestions,
+                    liveData), // Para futuras sugestões
+              ),
               if (provider.status == LiveFixturePollingStatus.finished)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 24.0, horizontal: 16.0),
                   child: Card(
                     color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                    elevation: 0,
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Text(
-                        "Jogo Finalizado: ${liveData.homeTeam.name} ${liveData.homeScore ?? '-'} - ${liveData.awayScore ?? '-'} ${liveData.awayTeam.name} (${liveData.statusShort})",
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleMedium?.copyWith(
-                          color: isDarkMode ? Colors.white70 : Colors.black87,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        "Jogo Finalizado: ${liveData.homeTeamName} ${liveData.homeScore ?? '-'} - ${liveData.awayScore ?? '-'} ${liveData.awayTeamName} (${liveData.statusShort})",
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                                color: isDarkMode
+                                    ? Colors.white70
+                                    : Colors.black87,
+                                fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -164,100 +227,74 @@ class LiveFixtureScreen extends StatelessWidget {
         );
       case LiveFixturePollingStatus.disposed:
         return const Center(
-          child: Text("Atualizações ao vivo foram interrompidas."),
-        );
+            child: Text("Atualizações ao vivo foram interrompidas."));
     }
   }
 
-  Widget _buildSectionTitle(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
-      child: Text(
-        title,
-        style: Theme.of(
-          context,
-        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-      ),
+  // Helper para logo, similar ao de FixtureCardWidget e FixtureDetailScreen
+  Widget _buildTeamLogo(String? logoUrl, BuildContext context,
+      {double size = 40}) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final placeholderColor =
+        Theme.of(context).colorScheme.primary.withOpacity(0.08);
+    final iconColor = Theme.of(context).colorScheme.primary.withOpacity(0.7);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle),
+      clipBehavior: Clip.antiAlias,
+      child: logoUrl != null && logoUrl.isNotEmpty
+          ? CachedNetworkImage(
+              imageUrl: logoUrl,
+              fit: BoxFit.contain,
+              placeholder: (context, url) => Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: CircularProgressIndicator(
+                    strokeWidth: 1.5, color: iconColor),
+              ),
+              errorWidget: (context, url, error) => Icon(Icons.shield_outlined,
+                  size: size * 0.6, color: iconColor),
+            )
+          : Icon(Icons.shield, size: size * 0.6, color: iconColor),
     );
   }
 
-  Widget _buildTeamLogo(
-    String? logoUrl,
-    BuildContext context, {
-    double size = 40,
-  }) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return logoUrl != null && logoUrl.isNotEmpty
-        ? CachedNetworkImage(
-          imageUrl: logoUrl,
-          width: size,
-          height: size,
-          fit: BoxFit.contain,
-          placeholder:
-              (context, url) => SizedBox(
-                width: size,
-                height: size,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
-          errorWidget:
-              (context, url, error) => Icon(
-                Icons.shield_outlined,
-                size: size,
-                color: isDarkMode ? Colors.white54 : Colors.black54,
-              ),
-        )
-        : Icon(
-          Icons.shield,
-          size: size,
-          color: isDarkMode ? Colors.white54 : Colors.black54,
-        );
-  }
+  Widget _buildScoreboard(BuildContext context, LiveFixtureUpdate liveData,
+      Fixture fixtureBase, bool isDarkMode) {
+    final homeTeamName = liveData.homeTeamName; // Vem do LiveFixtureUpdate
+    final awayTeamName = liveData.awayTeamName; // Vem do LiveFixtureUpdate
+    final homeTeamLogo = liveData.homeTeamLogoUrl ??
+        fixtureBase.homeTeam.logoUrl; // Fallback para o logo do fixture base
+    final awayTeamLogo =
+        liveData.awayTeamLogoUrl ?? fixtureBase.awayTeam.logoUrl; // Fallback
 
-  Widget _buildScoreboard(
-    BuildContext context,
-    LiveFixtureUpdate liveData,
-    bool isDarkMode,
-  ) {
-    final homeTeamName = liveData.homeTeam.name;
-    final awayTeamName = liveData.awayTeam.name;
-    final homeTeamLogo = liveData.homeTeam.logoUrl;
-    final awayTeamLogo = liveData.awayTeam.logoUrl;
     final homeScore = liveData.homeScore ?? 0;
     final awayScore = liveData.awayScore ?? 0;
     final elapsed = liveData.elapsedMinutes ?? 0;
-    final statusShort = liveData.statusShort ?? "NS";
-    final statusLong = liveData.statusLong ?? "Não Iniciado";
+    final statusShort = liveData.statusShort ?? fixtureBase.statusShort;
+    final statusLong = liveData.statusLong ?? fixtureBase.statusLong;
 
-    Color liveStatusColor =
-        statusShort == "HT"
-            ? Colors.orangeAccent.shade700
-            : Theme.of(context).colorScheme.error; // Vermelho padrão para LIVE
+    Color liveStatusColor = statusShort == "HT"
+        ? Colors.orangeAccent.shade700
+        : Colors.redAccent.shade400;
     if (["FT", "AET", "PEN"].contains(statusShort)) {
       liveStatusColor =
-          Theme.of(
-            context,
-          ).colorScheme.secondary; // Cor secundária para finalizado
-    } else if (statusShort == "NS" || statusShort == "PST") {
-      liveStatusColor = Colors.grey.shade500;
+          isDarkMode ? Colors.grey.shade600 : Colors.grey.shade700;
+    }
+    if (statusShort == "NS" || statusShort == "TBD") {
+      liveStatusColor =
+          isDarkMode ? Colors.blueGrey.shade300 : Colors.blueGrey.shade500;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(
+          vertical: 16.0, horizontal: 16.0), // Reduzido padding vertical
       decoration: BoxDecoration(
-        color:
-            isDarkMode
-                ? Theme.of(context).cardTheme.color?.withOpacity(0.5)
-                : Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: isDarkMode
+            ? Colors.black.withOpacity(0.2)
+            : Theme.of(context).canvasColor, // Cor de fundo sutil
+        // border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.8))
       ),
       child: Column(
         children: [
@@ -266,14 +303,16 @@ class LiveFixtureScreen extends StatelessWidget {
               Expanded(
                 child: Column(
                   children: [
-                    _buildTeamLogo(homeTeamLogo, context, size: 50),
-                    const SizedBox(height: 8),
+                    _buildTeamLogo(homeTeamLogo, context,
+                        size: 48), // Tamanho ligeiramente menor
+                    const SizedBox(height: 6),
                     Text(
                       homeTeamName,
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -281,58 +320,52 @@ class LiveFixtureScreen extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
                 child: Column(
                   children: [
                     Text(
                       "$homeScore - $awayScore",
-                      style: Theme.of(context).textTheme.headlineLarge
-                          ?.copyWith(fontWeight: FontWeight.bold), // Aumentado
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold, fontSize: 28),
                     ),
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
+                          horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: liveStatusColor,
-                        borderRadius: BorderRadius.circular(
-                          20,
-                        ), // Mais arredondado
-                      ),
+                          color: liveStatusColor,
+                          borderRadius: BorderRadius.circular(16)),
                       child: Text(
                         (elapsed > 0 &&
-                                ![
-                                  "HT",
-                                  "FT",
-                                  "AET",
-                                  "PEN",
-                                  "NS",
-                                  "PST",
-                                ].contains(statusShort))
+                                !["HT", "FT", "AET", "PEN", "NS", "TBD"]
+                                    .contains(statusShort))
                             ? "$elapsed'"
                             : statusShort,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ), // Ajustado
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium
+                            ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
                       ),
-                    ),
+                    )
                   ],
                 ),
               ),
               Expanded(
                 child: Column(
                   children: [
-                    _buildTeamLogo(awayTeamLogo, context, size: 50),
-                    const SizedBox(height: 8),
+                    _buildTeamLogo(awayTeamLogo, context, size: 48),
+                    const SizedBox(height: 6),
                     Text(
                       awayTeamName,
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -343,471 +376,235 @@ class LiveFixtureScreen extends StatelessWidget {
           ),
           if (statusLong != statusShort &&
               (elapsed == 0 ||
-                  ["NS", "PST", "CANC", "ABD"].contains(statusShort)) &&
-              !["HT", "FT", "AET", "PEN"].contains(statusShort))
+                  ["NS", "TBD", "PST", "CANC"].contains(statusShort)))
             Padding(
-              padding: const EdgeInsets.only(top: 12.0),
-              child: Text(
-                statusLong,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-              ),
-            ),
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(statusLong,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Theme.of(context).hintColor)),
+            )
         ],
       ),
     );
   }
 
-  Widget _buildEventsList(
-    BuildContext context,
-    LiveFixtureUpdate liveData,
-    bool isDarkMode,
-  ) {
-    final events = liveData.events;
+  Widget _buildEventsList(BuildContext context, LiveFixtureUpdate liveData) {
+    // Modificado para receber liveData
+    final events = liveData.events; // Pega os eventos do liveData
     if (events.isEmpty &&
         (liveData.statusShort == "NS" || (liveData.elapsedMinutes ?? 0) < 1)) {
       return Card(
-        elevation: 0,
-        color:
-            isDarkMode
-                ? Theme.of(context).cardTheme.color?.withOpacity(0.3)
-                : Colors.grey[100],
-        child: const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Center(
-            child: Text(
-              "O jogo ainda não começou ou não há eventos registrados.",
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      );
+          elevation: 0,
+          color: Theme.of(context).cardColor.withOpacity(0.5),
+          child: const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(
+                  child: Text("O jogo ainda não começou ou não há eventos.",
+                      textAlign: TextAlign.center))));
     }
     if (events.isEmpty) {
       return Card(
-        elevation: 0,
-        color:
-            isDarkMode
-                ? Theme.of(context).cardTheme.color?.withOpacity(0.3)
-                : Colors.grey[100],
-        child: const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Center(
-            child: Text(
-              "Sem eventos importantes até o momento.",
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      );
+          elevation: 0,
+          color: Theme.of(context).cardColor.withOpacity(0.5),
+          child: const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(
+                  child: Text("Sem eventos importantes até o momento.",
+                      textAlign: TextAlign.center))));
     }
-    // Mostrar os eventos em ordem cronológica (API já costuma retornar assim)
-    // Ou podemos inverter para mostrar os mais recentes no topo se desejado: `events.reversed.toList()`
-    final displayedEvents =
-        events.length > 7
-            ? events.reversed.toList().sublist(0, 7)
-            : events.reversed.toList();
+    final displayedEvents = events.length > 7
+        ? events.sublist(events.length - 7)
+        : events; // Aumentei para 7
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(context, "Linha do Tempo ⏱️"),
-        Card(
-          elevation: 1.5,
-          child: ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: displayedEvents.length,
-            itemBuilder: (ctx, index) {
-              final event = displayedEvents[index];
-              IconData iconData;
-              Color iconColor = Theme.of(context).colorScheme.primary;
-              String eventTitle = "${event.type}: ${event.detail}";
-              String eventSubtitleDetails = "Time: ${event.teamName ?? 'N/A'}";
-              if (event.comments != null && event.comments!.isNotEmpty) {
-                eventSubtitleDetails += " - ${event.comments}";
-              }
+        Text("Linha do Tempo ⏱️",
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: displayedEvents.length,
+          itemBuilder: (ctx, index) {
+            final event = displayedEvents.reversed.toList()[index];
+            IconData iconData;
+            Color iconColor = Theme.of(context).colorScheme.primary;
+            String eventTitle = "${event.type}: ${event.detail}";
 
-              switch (event.type.toLowerCase()) {
-                case "goal":
-                  iconData = Icons.sports_soccer;
-                  iconColor = Colors.green.shade600;
-                  eventTitle =
-                      "GOL! ${event.playerName ?? event.teamName ?? ''}";
-                  if (event.assistPlayerName != null)
-                    eventTitle += " (Ass: ${event.assistPlayerName})";
-                  break;
-                case "card":
-                  iconData = Icons.sticky_note_2_outlined;
-                  iconColor =
-                      event.detail.toLowerCase().contains("yellow card")
-                          ? Colors.amber.shade700
-                          : Colors.red.shade700;
-                  eventTitle = "${event.detail} para ${event.playerName ?? ''}";
-                  break;
-                case "subst":
-                  iconData = Icons.swap_horiz_rounded;
-                  iconColor = Colors.blueGrey.shade400;
-                  eventTitle = "Substituição";
-                  eventSubtitleDetails =
-                      "Sai: ${event.assistPlayerName ?? 'N/A'}\nEntra: ${event.playerName ?? 'N/A'} (${event.teamName ?? 'N/A'})";
-                  break;
-                case "var":
-                  iconData = Icons.switch_video_outlined;
-                  iconColor = Colors.purple.shade400;
-                  eventTitle = "VAR: ${event.detail}";
-                  break;
-                default:
-                  iconData = Icons.info_outline_rounded;
-              }
+            // ===== CORREÇÃO AQUI para teamNameForEvent =====
+            String teamNameForEvent = event.teamName ??
+                (event.teamId == liveData.homeTeamId
+                    ? liveData.homeTeamName
+                    : (event.teamId == liveData.awayTeamId
+                        ? liveData.awayTeamName
+                        : "Time Desconhecido"));
+            // =============================================
 
-              return ListTile(
-                leading: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "${event.timeElapsed ?? ''}'${event.timeExtra != null ? "+${event.timeExtra}" : ""}",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+            switch (event.type.toLowerCase()) {
+              case "goal":
+                iconData = Icons.sports_soccer;
+                iconColor = Colors.green.shade600;
+                eventTitle = "GOL! ${event.playerName ?? ''}";
+                break;
+              case "card":
+                iconData = Icons.style;
+                iconColor = event.detail.toLowerCase().contains("yellow")
+                    ? Colors.amber.shade700
+                    : Colors.red.shade700;
+                eventTitle = "${event.detail} para ${event.playerName ?? ''}";
+                break;
+              case "subst":
+                iconData = Icons.swap_horiz;
+                iconColor = Colors.blueGrey.shade400;
+                eventTitle =
+                    "Sub: ${event.playerName ?? '?'} entra, ${event.assistPlayerName ?? '?'} sai";
+                break;
+              case "var":
+                iconData = Icons.videocam_outlined;
+                iconColor = Colors.purple.shade300;
+                eventTitle = "VAR: ${event.detail}";
+                break;
+              default:
+                iconData = Icons.info_outline;
+            }
+
+            String teamOfEventBadge = "";
+            // ===== CORREÇÃO AQUI para teamOfEventBadge =====
+            if (event.teamId == liveData.homeTeamId) {
+              teamOfEventBadge = "(C)";
+            } else if (event.teamId == liveData.awayTeamId) {
+              teamOfEventBadge = "(F)";
+            }
+            // =============================================
+
+            return Container(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 6.0, horizontal: 4.0),
+              decoration: BoxDecoration(
+                  border: Border(
+                      bottom: BorderSide(
+                          color:
+                              Theme.of(context).dividerColor.withOpacity(0.5),
+                          width: 0.5))),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 55,
+                    child: Column(
+                      children: [
+                        Text(
+                            "${event.timeElapsed ?? ''}'${event.timeExtra != null ? "+${event.timeExtra}" : ""}",
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(fontWeight: FontWeight.bold)),
+                        Icon(iconData, color: iconColor, size: 24),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Icon(iconData, color: iconColor, size: 28),
-                  ],
-                ),
-                title: Text(
-                  eventTitle,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: Text(
-                  eventSubtitleDetails,
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                dense: true,
-              );
-            },
-            separatorBuilder:
-                (_, __) => const Divider(
-                  height: 1,
-                  indent: 70,
-                  endIndent: 16,
-                ), // Ajustado indent
-          ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(eventTitle,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w500)),
+                        if (teamNameForEvent.isNotEmpty ||
+                            (event.comments?.isNotEmpty ?? false))
+                          Text(
+                            "${teamNameForEvent.isNotEmpty ? '$teamNameForEvent. ' : ''}${event.comments ?? ''}",
+                            style: Theme.of(context).textTheme.labelSmall,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (teamOfEventBadge
+                      .isNotEmpty) // Só mostra o badge se o time foi identificado
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Text(teamOfEventBadge,
+                          style: TextStyle(
+                              color: iconColor.withOpacity(0.8),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12)),
+                    ),
+                ],
+              ),
+            );
+          },
+          separatorBuilder: (_, __) => const SizedBox.shrink(),
         ),
       ],
     );
   }
 
   Widget _buildLiveStatsSection(
-    BuildContext context,
-    LiveFixtureUpdate liveData,
-  ) {
+      BuildContext context, LiveFixtureUpdate liveData) {
     if (liveData.homeTeamLiveStats == null &&
         liveData.awayTeamLiveStats == null) {
-      return Card(/* ... como antes ... */);
+      return Card(
+          elevation: 0,
+          color: Theme.of(context).cardColor.withOpacity(0.5),
+          child: const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(
+                  child: Text(
+                      "Estatísticas ao vivo detalhadas não disponíveis.",
+                      textAlign: TextAlign.center))));
     }
-
-    final homeStats = liveData.homeTeamLiveStats;
-    final awayStats = liveData.awayTeamLiveStats;
-
+    // (Reutilizar/Adaptar _buildFixtureStatsComparison da FixtureDetailScreen para TeamLiveStats)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(context, "Estatísticas Ao Vivo 📈"),
+        Text("Estatísticas do Jogo 📈",
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
         Card(
-          elevation: 1.5,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    _teamStatHeader(
-                      context,
-                      liveData.homeTeam.name,
-                      liveData.homeTeam.logoUrl,
-                    ),
-                    const SizedBox(
-                      width: 8,
-                      child: Center(
-                        child: Text(
-                          "vs",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                    _teamStatHeader(
-                      context,
-                      liveData.awayTeam.name,
-                      liveData.awayTeam.logoUrl,
-                      alignRight: true,
-                    ),
-                  ],
-                ),
-                const Divider(height: 20),
-                if (homeStats?.expectedGoalsLive != null ||
-                    awayStats?.expectedGoalsLive != null)
-                  _buildStatRow(
-                    context,
-                    "Gols Esperados (xG)",
-                    homeStats?.expectedGoalsLive?.toStringAsFixed(2) ?? "-",
-                    awayStats?.expectedGoalsLive?.toStringAsFixed(2) ?? "-",
-                    highlightStronger: true,
-                    isLowerBetter: false,
-                  ),
-                _buildStatRow(
-                  context,
-                  "Finalizações (No Gol)",
-                  "${homeStats?.totalShots ?? '-'}(${homeStats?.shotsOnGoal ?? '-'})",
-                  "${awayStats?.totalShots ?? '-'}(${awayStats?.shotsOnGoal ?? '-'})",
-                ),
-                _buildStatRow(
-                  context,
-                  "Posse de Bola",
-                  homeStats?.ballPossession ?? "-",
-                  awayStats?.ballPossession ?? "-",
-                  highlightStronger: true,
-                  isLowerBetter: false,
-                ),
-                _buildStatRow(
-                  context,
-                  "Escanteios",
-                  homeStats?.corners?.toString() ?? "-",
-                  awayStats?.corners?.toString() ?? "-",
-                  highlightStronger: true,
-                  isLowerBetter: false,
-                ),
-                _buildStatRow(
-                  context,
-                  "Cartões Amarelos",
-                  homeStats?.yellowCards?.toString() ?? "-",
-                  awayStats?.yellowCards?.toString() ?? "-",
-                  isLowerBetter: true,
-                ),
-                _buildStatRow(
-                  context,
-                  "Cartões Vermelhos",
-                  homeStats?.redCards?.toString() ?? "-",
-                  awayStats?.redCards?.toString() ?? "-",
-                  isLowerBetter: true,
-                ),
-              ],
-            ),
-          ),
-        ),
+            /* ... Implementar exibição das TeamLiveStats ... */
+            child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Text(
+              "Placeholder para exibir estatísticas ao vivo como posse, chutes, xG ao vivo."),
+        )),
       ],
     );
   }
 
-  Widget _buildLiveSuggestionsSection(
-    BuildContext context,
-    List<LiveBetSuggestion> suggestions,
-    LiveFixtureUpdate liveData,
-  ) {
-    if (suggestions.isEmpty) {
-      return Card(/* ... como antes ... */);
-    }
-
+  Widget _buildLiveSuggestionsSection(BuildContext context,
+      List<LiveBetSuggestion> suggestions, LiveFixtureUpdate liveData) {
+    // (Reutilizar/Adaptar o _buildLiveSuggestionsSection que já fizemos, se tiver sugestões)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(context, "Sugestões Ao Vivo 💡"),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: suggestions.length,
-          itemBuilder: (ctx, index) {
-            final suggestion = suggestions[index];
-            Color strengthColor;
-            String strengthText;
-            IconData strengthIcon;
-
-            switch (suggestion.strength) {
-              case BetSuggestionStrength.low:
-                strengthColor = Colors.orange.shade400;
-                strengthText = "Baixa";
-                strengthIcon = Icons.arrow_downward_rounded;
-                break;
-              case BetSuggestionStrength.medium:
-                strengthColor = Colors.amber.shade700;
-                strengthText = "Média";
-                strengthIcon = Icons.arrow_forward_rounded;
-                break;
-              case BetSuggestionStrength.high:
-                strengthColor = Colors.green.shade600;
-                strengthText = "Alta";
-                strengthIcon = Icons.arrow_upward_rounded;
-                break;
-            }
-
-            return Card(
-              elevation: 1.5,
-              margin: const EdgeInsets.only(bottom: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: BorderSide(
-                  color: strengthColor.withOpacity(0.6),
-                  width: 1.0,
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            "${suggestion.marketName}: ${suggestion.selectionName}",
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Chip(
-                          label: Text(
-                            "Odd: ${suggestion.currentOdd}",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary.withOpacity(0.9),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      suggestion.reasoning,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(fontSize: 13.5),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Chip(
-                          avatar: Icon(
-                            strengthIcon,
-                            size: 16,
-                            color: strengthColor,
-                          ),
-                          label: Text(
-                            "Confiança: $strengthText",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: strengthColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          // ignore: deprecated_member_use
-                          backgroundColor: strengthColor.withOpacity(0.1),
-                          // ignore: deprecated_member_use
-                          shape: StadiumBorder(
-                            side: BorderSide(
-                              color: strengthColor.withOpacity(0.3),
-                            ),
-                          ),
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 0,
-                          ),
-                        ),
-                        Text(
-                          "${suggestion.currentScore} (${suggestion.suggestedAtMinute ?? liveData.elapsedMinutes ?? ''}')",
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLiveInsightsSection(
-    BuildContext context,
-    List<LiveGameInsight> insights,
-  ) {
-    if (insights.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle(context, "Insights Ao Vivo 🔥"),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: insights.length,
-          itemBuilder: (ctx, index) {
-            final insight = insights[index];
-            return Card(
-              elevation: 1,
-              margin: const EdgeInsets.only(bottom: 8),
-              color:
-                  insight.iconColor?.withOpacity(0.08) ??
-                  Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(
-                  color:
-                      insight.iconColor?.withOpacity(0.4) ?? Colors.transparent,
-                  width: 0.7,
-                ),
-              ),
-              child: ListTile(
-                leading:
-                    insight.icon != null
-                        ? CircleAvatar(
-                          backgroundColor:
-                              insight.iconColor?.withOpacity(0.2) ??
-                              Theme.of(
-                                context,
-                              ).colorScheme.primary.withOpacity(0.1),
-                          child: Icon(
-                            insight.icon,
-                            color:
-                                insight.iconColor ??
-                                Theme.of(context).colorScheme.primary,
-                            size: 22,
-                          ),
-                        )
-                        : null,
-                title: Text(
-                  insight.description,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 13.5,
-                  ),
-                ),
-                subtitle: Text(
-                  "Às ${DateFormat.Hm('pt_BR').format(insight.timestamp.toLocal())}${insight.relatedTeamName != null ? ' - ${insight.relatedTeamName}' : ''}",
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-                dense: true,
-              ),
-            );
-          },
-        ),
+        Text("Sugestões Ao Vivo 💡",
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Card(
+            elevation: 0,
+            color: Theme.of(context).cardColor.withOpacity(0.5),
+            child: const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(
+                  child: Text("Motor de sugestões ao vivo em desenvolvimento.",
+                      textAlign: TextAlign.center)),
+            )),
       ],
     );
   }
@@ -916,15 +713,15 @@ class LiveFixtureScreen extends StatelessWidget {
               height: logoSize,
               width: logoSize,
               fit: BoxFit.contain,
-              errorWidget:
-                  (c, u, e) => Icon(Icons.shield_outlined, size: logoSize),
+              errorWidget: (c, u, e) =>
+                  Icon(Icons.shield_outlined, size: logoSize),
             ),
           const SizedBox(height: 4),
           Text(
             name,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ), // Ajustado para titleMedium
+                  fontWeight: FontWeight.w600,
+                ), // Ajustado para titleMedium
             textAlign: alignRight ? TextAlign.end : TextAlign.start,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

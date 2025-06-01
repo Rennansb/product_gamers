@@ -80,18 +80,18 @@ class _FixturesScreenState extends State<FixturesScreen> {
 
     if (isImminentOrLive && !isTrulyFinished) {
       // Navegar para LiveFixtureScreen
+      // O LiveFixtureProvider será criado aqui, lendo seus UseCases do contexto global
       Navigator.push(
         navContext,
         MaterialPageRoute(
           builder: (contextForProvider) => ChangeNotifierProvider(
             create: (_) => LiveFixtureProvider(
+              // Este provider ainda não foi totalmente implementado
               fixtureId: fixture.id,
-              // === CORREÇÃO AQUI: Adicionar os parâmetros faltantes ===
-              homeTeamId: fixture.homeTeam.id,
-              homeTeamName: fixture.homeTeam.name,
-              awayTeamId: fixture.awayTeam.id,
-              awayTeamName: fixture.awayTeam.name,
-              // ======================================================
+              homeTeamId: fixture.homeTeam.id, // Adicionado
+              homeTeamName: fixture.homeTeam.name, // Adicionado
+              awayTeamId: fixture.awayTeam.id, // Adicionado
+              awayTeamName: fixture.awayTeam.name, // Adicionado
               getLiveFixtureUpdateUseCase:
                   contextForProvider.read<GetLiveFixtureUpdateUseCase>(),
               getLiveOddsUseCase: contextForProvider.read<GetLiveOddsUseCase>(),
@@ -102,13 +102,14 @@ class _FixturesScreenState extends State<FixturesScreen> {
       );
     } else {
       // Navegar para FixtureDetailScreen (pré-jogo ou finalizado)
+      // O FixtureDetailProvider será criado aqui
       Navigator.push(
         navContext,
         MaterialPageRoute(
           builder: (contextForProvider) => ChangeNotifierProvider(
             create: (_) => FixtureDetailProvider(
-              baseFixture:
-                  fixture, // baseFixture já contém os IDs e nomes dos times
+              // Este provider ainda não foi totalmente implementado
+              baseFixture: fixture,
               getFixtureStatsUseCase:
                   contextForProvider.read<GetFixtureStatisticsUseCase>(),
               getOddsUseCase: contextForProvider.read<GetOddsUseCase>(),

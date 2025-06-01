@@ -47,14 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToFixturesScreen(BuildContext navContext, League league) {
-    // Obtém o GetFixturesUseCase do contexto global (provido no main.dart)
-    // Não precisamos mais passar os outros usecases (GetOddsUseCase, etc.) diretamente para FixturesScreen,
-    // pois a FixturesScreen pode lê-los do contexto global quando for criar os providers para
-    // FixtureDetailScreen ou LiveFixtureScreen.
     final getFixturesUseCase = navContext.read<GetFixturesUseCase>();
-
-    // Determina a temporada a ser usada.
-    // Se league.currentSeasonYear for nulo, usa o ano atual.
     final String seasonToFetch = league.currentSeasonYear?.toString() ??
         DateFormatter.getYear(DateTime.now());
 
@@ -62,12 +55,12 @@ class _HomeScreenState extends State<HomeScreen> {
       navContext,
       MaterialPageRoute(
         builder: (context) => ChangeNotifierProvider(
-          // Prover FixtureProvider para a FixturesScreen
           create: (_) => FixtureProvider(
+            // Passa o UseCase e os parâmetros
             getFixturesUseCase: getFixturesUseCase,
             leagueId: league.id,
             season: seasonToFetch,
-          )..fetchFixtures(), // Inicia o fetch de jogos assim que o provider é criado
+          )..fetchFixtures(), // Inicia o fetch aqui
           child: FixturesScreen(league: league),
         ),
       ),
