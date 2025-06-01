@@ -11,6 +11,7 @@ import 'team_aggregated_stats.dart';
 
 class DataForPrediction extends Equatable {
   final Fixture fixture;
+
   final FixtureStatsEntity? fixtureStats;
   final List<PrognosticMarket> odds;
   final List<Fixture>? h2hFixtures;

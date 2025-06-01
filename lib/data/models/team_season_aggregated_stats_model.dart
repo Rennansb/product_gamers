@@ -69,6 +69,7 @@ class AggregatedCardsTypeModel extends Equatable {
 }
 
 class TeamSeasonAggregatedStatsModel extends Equatable {
+  final double? avgCornersConceded;
   final int teamId;
   final int leagueId;
   final String leagueName;
@@ -107,7 +108,8 @@ class TeamSeasonAggregatedStatsModel extends Equatable {
     this.avgGoalsConceded,
     this.avgYellowCards,
     this.avgRedCards,
-    this.avgCornersGenerated, // Continua aqui, mas provavelmente será nulo
+    this.avgCornersGenerated,
+    this.avgCornersConceded, // Adicionar ao construtor do modelo
   });
 
   factory TeamSeasonAggregatedStatsModel.fromJson(Map<String, dynamic> json,

@@ -15,14 +15,15 @@ class TeamAggregatedStats extends Equatable {
   final int goalsAgainst;
   final String? formStreak;
 
-  // Nomes dos campos na ENTIDADE que devem corresponder aos parâmetros do construtor
   final double? averageGoalsScoredPerGame;
   final double? averageGoalsConcededPerGame;
-  final double? averageCornersGeneratedPerGame; // <- Nome usado na entidade
-  final double? averageYellowCardsPerGame; // <- Nome usado na entidade
-  final double? averageRedCardsPerGame; // <- Nome usado na entidade
+  // ===== NOMES CORRIGIDOS/ADICIONADOS PARA ESCANTEIOS =====
+  final double? averageCornersGeneratedPerGame;
+  final double? averageCornersConcededPerGame; // Adicionado para consistência
+  // =====================================================
+  final double? averageYellowCardsPerGame;
+  final double? averageRedCardsPerGame;
 
-  // CONSTRUTOR DA ENTIDADE - Parâmetros nomeados DEVEM corresponder
   const TeamAggregatedStats({
     required this.teamId,
     required this.leagueId,
@@ -37,28 +38,21 @@ class TeamAggregatedStats extends Equatable {
     this.formStreak,
     this.averageGoalsScoredPerGame,
     this.averageGoalsConcededPerGame,
-    this.averageCornersGeneratedPerGame, // <--- PARÂMETRO NOMEADO CORRETO
-    this.averageYellowCardsPerGame, // <--- PARÂMETRO NOMEADO CORRETO
-    this.averageRedCardsPerGame, // <--- PARÂMETRO NOMEADO CORRETO
+    // ===== PARÂMETROS CORRIGIDOS/ADICIONADOS =====
+    this.averageCornersGeneratedPerGame,
+    this.averageCornersConcededPerGame,
+    // ============================================
+    this.averageYellowCardsPerGame,
+    this.averageRedCardsPerGame,
   });
 
   @override
   List<Object?> get props => [
-        teamId,
-        leagueId,
-        leagueName,
-        season,
-        played,
-        wins,
-        draws,
-        losses,
-        goalsFor,
-        goalsAgainst,
-        formStreak,
-        averageGoalsScoredPerGame,
-        averageGoalsConcededPerGame,
+        teamId, leagueId, leagueName, season, played, wins, draws, losses,
+        goalsFor, goalsAgainst, formStreak,
+        averageGoalsScoredPerGame, averageGoalsConcededPerGame,
         averageCornersGeneratedPerGame,
-        averageYellowCardsPerGame,
-        averageRedCardsPerGame,
+        averageCornersConcededPerGame, // Adicionado
+        averageYellowCardsPerGame, averageRedCardsPerGame,
       ];
 }
