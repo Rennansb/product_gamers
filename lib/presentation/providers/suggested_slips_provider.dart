@@ -1,6 +1,7 @@
 // lib/presentation/providers/suggested_slips_provider.dart
 import 'package:flutter/material.dart';
 import 'package:product_gamers/core/config/failure.dart';
+import 'package:product_gamers/core/error/exceptions.dart';
 import 'package:product_gamers/domain/entities/entities/fixture.dart';
 import 'package:product_gamers/domain/entities/entities/suggested_bet_slip.dart';
 // <<< IMPORT CORRETO
@@ -86,10 +87,10 @@ class SuggestedSlipsProvider with ChangeNotifier {
 
     try {
       List<int> leaguesToAnalyze =
-          AppConstants.popularLeagues.values.take(3).toList();
+          AppConstants.popularLeagues.values.take(1).toList();
       String currentSeason = DateFormatter.getYear(DateTime.now());
       int totalGamesFetched = 0;
-      const int maxGamesToAnalyze = 6;
+      const int maxGamesToAnalyze = 1;
 
       // A busca de fixtures é async, então o try/catch principal pegará erros dela.
       for (int leagueId in leaguesToAnalyze) {
@@ -97,7 +98,7 @@ class SuggestedSlipsProvider with ChangeNotifier {
         final result = await _getFixturesUseCase(
           leagueId: leagueId,
           season: currentSeason,
-          nextGames: 3,
+          nextGames: 1,
         );
         if (_isDisposed) {
           _isCurrentlyFetching = false;
@@ -107,18 +108,19 @@ class SuggestedSlipsProvider with ChangeNotifier {
           if (kDebugMode)
             print(
                 "SuggestedSlipsProvider: Falha ao buscar jogos da liga $leagueId: ${failure.message}");
-          // Não definir erro fatal aqui para tentar outras ligas, mas podemos sinalizar.
-          // fetchFixturesError = true; // Sinaliza que houve pelo menos uma falha
-        }, (fixtures) {
-          for (var fixture in fixtures) {
-            if (totalGamesFetched < maxGamesToAnalyze &&
-                !fixturesForAnalysis.any((f) => f.id == fixture.id)) {
-              fixturesForAnalysis.add(fixture);
-              totalGamesFetched++;
-            }
-            if (totalGamesFetched >= maxGamesToAnalyze) break;
+          // Adicione aqui para ver se o erro é de API esgotada:
+          if (failure is ApiException &&
+              failure.message.toLowerCase().contains("quota")) {
+            print(
+                "!!!! COTA DA API ESGOTADA AO BUSCAR JOGOS DA LIGA $leagueId !!!!");
           }
+        }, (fixtures) {
+          if (kDebugMode)
+            print(
+                "SuggestedSlipsProvider: Liga $leagueId - ${fixtures.length} jogos encontrados.");
+          // ... resto da lógica ...
         });
+        ;
       }
       fixturesForAnalysis.sort((a, b) => a.date.compareTo(b.date));
     } catch (e) {

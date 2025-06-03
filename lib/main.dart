@@ -47,7 +47,9 @@ import 'presentation/screens/home_screen.dart';
 
 void main() async {
   // ... (inicialização)
-
+  WidgetsFlutterBinding.ensureInitialized(); // PRIMEIRO
+  await dotenv.load(fileName: ".env"); // SEGUNDO
+  await initializeDateFormatting('pt_BR', null); // TERCEIRO, ANTES
   // --- DI Simples com as classes reais ---
   final httpClient = http.Client();
   final FootballRemoteDataSource remoteDataSource =

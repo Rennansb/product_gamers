@@ -1,4 +1,5 @@
 // lib/data/models/player_season_stats_model.dart
+import 'package:collection/collection.dart';
 import 'package:equatable/equatable.dart';
 import 'package:product_gamers/domain/entities/entities/player_stats.dart'
     show PlayerSeasonStats;
@@ -12,9 +13,8 @@ import 'team_model.dart'; // Para o time do jogador, se aplicável
 // Este modelo encapsula a resposta do endpoint /players?id=X&season=Y ou /players/topscorers
 class PlayerSeasonStatsModel extends Equatable {
   final PlayerInfoModel player; // Informações básicas do jogador
-  // A API para /players?id=X&season=Y retorna uma lista de 'statistics',
-  // cada uma sendo um PlayerCompetitionStatsModel.
-  // Para /players/topscorers, cada item da lista já é um jogador com suas estatísticas (geralmente 1).
+  // A API para /players?id=X&season=Y ou /players/topscorers retorna uma lista de "statistics",
+  // cada uma sendo um PlayerCompetitionStatsModel (estatísticas para uma liga/competição diferente).
   final List<PlayerCompetitionStatsModel> statisticsPerCompetition;
 
   const PlayerSeasonStatsModel({
@@ -23,74 +23,89 @@ class PlayerSeasonStatsModel extends Equatable {
   });
 
   factory PlayerSeasonStatsModel.fromJson(Map<String, dynamic> json) {
-    // O endpoint /players?id=X&season=Y tem 'player' e 'statistics' no root do primeiro item da lista de resposta.
-    // O endpoint /players/topscorers tem 'player' e 'statistics' para cada item da lista de resposta.
-    // Esta factory espera um objeto que já contenha 'player' e 'statistics'.
+    // Esta factory espera um objeto JSON que já contenha as chaves 'player' e 'statistics'.
+    // Para /players?id=X&season=Y, a API retorna uma LISTA com UM objeto assim.
+    // Para /players/topscorers, a API retorna uma LISTA de objetos assim (um por jogador).
+    // O FootballRemoteDataSourceImpl já lida com a extração do objeto correto da lista da API.
     return PlayerSeasonStatsModel(
       player: PlayerInfoModel.fromJson(
-        json['player'] as Map<String, dynamic>? ?? json,
-      ), // Tenta 'player', senão o root
-      statisticsPerCompetition:
-          (json['statistics'] as List<dynamic>?)
-              ?.map(
-                (statJson) => PlayerCompetitionStatsModel.fromJson(
-                  statJson as Map<String, dynamic>,
-                ),
-              )
+          json['player'] as Map<String, dynamic>? ??
+              json), // Tenta 'player', senão o root (para /players/squads)
+      statisticsPerCompetition: (json['statistics'] as List<dynamic>?)
+              ?.map((statJson) => PlayerCompetitionStatsModel.fromJson(
+                  statJson as Map<String, dynamic>))
               .toList() ??
           [],
     );
   }
 
-  // Método para converter para a Entidade de Domínio
-  PlayerSeasonStats toEntity({int? filterByLeagueId}) {
+  Map<String, dynamic> toJson() => {
+        'player': player.toJson(), // Assumindo que PlayerInfoModel tem toJson()
+        'statistics': statisticsPerCompetition
+            .map((s) => {
+                  /* Lógica para serializar PlayerCompetitionStatsModel se necessário */
+                })
+            .toList(),
+      };
+
+  // Converte para a Entidade de Domínio PlayerSeasonStats
+  // Tenta encontrar as estatísticas da competição principal ou a mais relevante.
+  PlayerSeasonStats toEntity(
+      {int? filterByLeagueId, String? filterByLeagueName}) {
     PlayerCompetitionStatsModel? relevantStats;
 
     if (statisticsPerCompetition.isNotEmpty) {
       if (filterByLeagueId != null) {
-        relevantStats = statisticsPerCompetition.firstWhere(
-          (s) => (s.leagueRaw?['id'] as int?) == filterByLeagueId,
-          orElse:
-              () =>
-                  statisticsPerCompetition
-                      .first, // Fallback para a primeira se a liga não for encontrada
-        );
-      } else {
-        // Lógica para escolher a "principal" competição ou agregar.
-        // Por simplicidade, pegamos a primeira ou a com mais jogos.
-        relevantStats = statisticsPerCompetition.reduce(
-          (curr, next) =>
-              (curr.appearances ?? 0) >= (next.appearances ?? 0) ? curr : next,
+        relevantStats = statisticsPerCompetition.firstWhereOrNull(
+          (s) => s.leagueId == filterByLeagueId,
         );
       }
+      if (relevantStats == null && filterByLeagueName != null) {
+        relevantStats = statisticsPerCompetition.firstWhereOrNull(
+          (s) =>
+              s.leagueName?.toLowerCase() == filterByLeagueName.toLowerCase(),
+        );
+      }
+      // Fallback: Pega a competição com mais aparições, ou a primeira se todas tiverem 0 ou nulo.
+      relevantStats ??= statisticsPerCompetition
+              .sorted(
+                  (a, b) => (b.appearances ?? 0).compareTo(a.appearances ?? 0))
+              .firstOrNull ??
+          statisticsPerCompetition.first;
     }
 
     return PlayerSeasonStats(
       playerId: player.id,
       playerName: player.name,
       playerPhotoUrl: player.photoUrl,
+
       // Informações do time e liga são extraídas de relevantStats (se disponíveis)
       teamId: relevantStats?.team?.id,
       teamName: relevantStats?.team?.name,
       teamLogoUrl: relevantStats?.team?.logoUrl,
-      leagueId:
-          relevantStats?.leagueRaw?['id'] as int?, // Adicionado à entidade
-      leagueName: relevantStats?.leagueName, // Adicionado à entidade
+      leagueId: relevantStats?.leagueId,
+      leagueName: relevantStats?.leagueName,
 
       position: relevantStats?.position,
       appearances: relevantStats?.appearances,
       lineups: relevantStats?.lineups,
       minutesPlayed: relevantStats?.minutesPlayed,
+      rating: double.tryParse(relevantStats?.rating?.toString() ??
+          ""), // Converte rating para double
+
       goals: relevantStats?.goalsTotal,
       assists: relevantStats?.goalsAssists,
-      rating: double.tryParse(relevantStats?.rating ?? ""),
-      expectedGoalsIndividualPer90:
-          relevantStats
-              ?.expectedGoalsIndividual, // Supondo que já é por 90min ou precisa de cálculo
-      // Outras estatísticas da entidade
-      yellowCards:
-          relevantStats?.cardsRaw?['yellow'] as int?, // Exemplo de como extrair
-      redCards: relevantStats?.cardsRaw?['red'] as int?,
+
+      // Mapeando xG e xA totais da competição relevante para a entidade
+      xgTotalSeason: relevantStats?.expectedGoals,
+      xaTotalSeason: relevantStats?.expectedAssists,
+
+      shotsTotal: relevantStats?.shotsTotal,
+      shotsOnGoal: relevantStats?.shotsOnGoal,
+
+      yellowCards: relevantStats?.cardsYellow,
+      redCards: relevantStats?.cardsRed,
+      // Adicione outros campos da entidade PlayerSeasonStats que você queira popular
     );
   }
 

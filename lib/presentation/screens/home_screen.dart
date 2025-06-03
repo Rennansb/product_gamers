@@ -117,17 +117,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _isInitialDataFetched = false; // Flag para controlar o fetch inicial
+  // Flag para controlar se o fetch inicial já foi feito pelo didChangeDependencies
+  bool _initialDataFetchedByDidChange = false;
+
   @override
   void initState() {
     super.initState();
-    // Disparar o fetch DEPOIS que o primeiro frame for construído
+    // Disparar o fetch DEPOIS que o primeiro frame for construído,
+    // APENAS se didChangeDependencies não o fez (caso raro, mas como segurança).
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Só executa se o widget ainda estiver montado
-      if (mounted) {
+      if (mounted && !_initialDataFetchedByDidChange) {
         _fetchAllInitialData(
-            forceRefresh:
-                false); // Chamar com forceRefresh: false para carga inicial
+            forceRefresh: false, calledFrom: "initState_postFrame");
       }
     });
   }
@@ -136,27 +137,27 @@ class _HomeScreenState extends State<HomeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // didChangeDependencies é chamado após initState e quando as dependências do widget mudam.
-    // É um local mais seguro para interagir com o context para buscar dados iniciais
-    // em comparação com initState diretamente para Providers.
-    if (!_isInitialDataFetched) {
-      _fetchAllInitialData();
-      _isInitialDataFetched = true;
+    // É um local seguro para interagir com o context para buscar dados iniciais.
+    if (!_initialDataFetchedByDidChange) {
+      _fetchAllInitialData(
+          forceRefresh: false, calledFrom: "didChangeDependencies");
+      _initialDataFetchedByDidChange = true;
     }
   }
 
-  Future<void> _fetchAllInitialData({bool forceRefresh = false}) async {
-    if (!mounted) return; // Boa prática
+  Future<void> _fetchAllInitialData(
+      {bool forceRefresh = false, String calledFrom = "unknown"}) async {
+    if (!mounted) return;
 
     final leagueProv = context.read<LeagueProvider>();
     final suggestionsProv = context.read<SuggestedSlipsProvider>();
 
     if (kDebugMode) {
       print(
-          "HomeScreen: Iniciando _fetchAllInitialData (forceRefresh: $forceRefresh)");
+          "HomeScreen ($calledFrom): Iniciando _fetchAllInitialData (forceRefresh: $forceRefresh)");
     }
 
     try {
-      // Se for forceRefresh, os providers devem limpar seus próprios dados internamente
       await Future.wait([
         leagueProv.fetchLeagues(forceRefresh: forceRefresh),
         suggestionsProv.fetchAndGeneratePotentialBets(
@@ -181,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
             getFixturesUseCase: getFixturesUseCase,
             leagueId: league.id,
             season: seasonToFetch,
-          )..fetchFixtures(), // Inicia o fetch aqui
+          )..fetchFixtures(),
           child: FixturesScreen(league: league),
         ),
       ),
@@ -189,7 +190,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _getMarketCategoryTitle(String marketKey) {
-    // ... (como antes)
     switch (marketKey) {
       case "1X2":
         return "Resultado Final (1X2) 🏆";
@@ -211,7 +211,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSectionHeaderSliver(BuildContext context, String title) {
-    // ... (como antes)
     return SliverToBoxAdapter(
       child: Padding(
         padding:
@@ -221,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
           style: Theme.of(context)
               .textTheme
               .headlineSmall
-              ?.copyWith(fontWeight: FontWeight.bold, fontSize: 21),
+              ?.copyWith(fontWeight: FontWeight.w600, fontSize: 20), // Ajustado
         ),
       ),
     );
@@ -234,7 +233,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: () => _fetchAllInitialData(forceRefresh: true),
+        onRefresh: () =>
+            _fetchAllInitialData(forceRefresh: true, calledFrom: "onRefresh"),
         color: primaryColor,
         child: CustomScrollView(
           slivers: [
@@ -243,70 +243,86 @@ class _HomeScreenState extends State<HomeScreen> {
               pinned: true,
               floating: false,
               snap: false,
-              expandedHeight: 100.0,
+              expandedHeight: 80.0, // Reduzido para um visual mais compacto
               backgroundColor: primaryColor,
               foregroundColor: onPrimaryColor,
               flexibleSpace: FlexibleSpaceBar(
-                background: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [primaryColor, primaryColor.withOpacity(0.8)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                ),
+                centerTitle: true, // Centraliza o título da AppBar
+                titlePadding: const EdgeInsets.only(bottom: 16),
+                // background: Container(...), // Pode remover se não quiser fundo complexo
               ),
             ),
             _buildSectionHeaderSliver(context, "Sugestões de Entradas 🔥"),
             Consumer<SuggestedSlipsProvider>(
               builder: (context, suggestionsProvider, child) {
-                // A lógica de exibição de loading/error/empty/loaded para sugestões
-                // (como na sua última versão da HomeScreen)
                 if (suggestionsProvider.status == SuggestionsStatus.loading &&
-                    suggestionsProvider.marketSuggestions.isEmpty) {
+                    (suggestionsProvider.marketSuggestions.isEmpty &&
+                        suggestionsProvider.accumulatedSlips.isEmpty)) {
                   return const SliverToBoxAdapter(
-                      child: Padding(
-                    padding:
-                        EdgeInsets.symmetric(vertical: 50.0, horizontal: 20),
-                    child: LoadingIndicatorWidget(
-                        message: "Analisando jogos e gerando sugestões..."),
-                  ));
+                    child: Padding(
+                      padding:
+                          EdgeInsets.symmetric(vertical: 40.0, horizontal: 20),
+                      child: LoadingIndicatorWidget(
+                          message: "Analisando jogos e gerando sugestões..."),
+                    ),
+                  );
                 } else if (suggestionsProvider.status ==
                     SuggestionsStatus.error) {
                   return SliverToBoxAdapter(
-                      child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: ErrorDisplayWidget(
-                        message: suggestionsProvider.errorMessage ??
-                            "Não foi possível carregar as sugestões de entrada.",
-                        onRetry: () => suggestionsProvider
-                            .fetchAndGeneratePotentialBets(forceRefresh: true)),
-                  ));
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: ErrorDisplayWidget(
+                          message: suggestionsProvider.errorMessage ??
+                              "Não foi possível carregar as sugestões.",
+                          onRetry: () =>
+                              suggestionsProvider.fetchAndGeneratePotentialBets(
+                                  forceRefresh: true)),
+                    ),
+                  );
                 } else if (suggestionsProvider.marketSuggestions.isEmpty &&
+                    suggestionsProvider.accumulatedSlips.isEmpty &&
                     suggestionsProvider.status != SuggestionsStatus.loading) {
-                  // Adicionado check para não mostrar "empty" durante loading inicial
                   return SliverToBoxAdapter(
-                      child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20.0, vertical: 30.0),
-                    child: Center(
-                        child: Text(
-                      suggestionsProvider.errorMessage ??
-                          "Nenhuma sugestão de entrada encontrada para hoje. Verifique mais tarde!",
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyLarge
-                          ?.copyWith(color: Theme.of(context).hintColor),
-                    )),
-                  ));
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20.0, vertical: 30.0),
+                      child: Center(
+                          child: Text(
+                        suggestionsProvider.errorMessage ??
+                            "Nenhuma sugestão de entrada para hoje. Verifique mais tarde!",
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyLarge
+                            ?.copyWith(color: Theme.of(context).hintColor),
+                      )),
+                    ),
+                  );
                 }
 
+                // Construir uma lista plana de widgets (headers e cards) para um SliverChildListDelegate
+                List<Widget> suggestionWidgets = [];
+
+                // Adicionar Bilhetes Acumulados (se houver) - OPCIONAL
+                // if (suggestionsProvider.accumulatedSlips.isNotEmpty) {
+                //   suggestionWidgets.add(
+                //     Padding(
+                //       padding: const EdgeInsets.only(top: 18, left: 16, right: 16, bottom: 8),
+                //       child: Text("Bilhetes Prontos 🎟️", style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+                //     )
+                //   );
+                //   suggestionWidgets.addAll(
+                //     suggestionsProvider.accumulatedSlips.map((slip) => SuggestedSlipCardWidget(slip: slip)).toList()
+                //   );
+                //   suggestionWidgets.add(const SizedBox(height: 10));
+                // }
+
+                // Adicionar Sugestões por Mercado
                 final categories = suggestionsProvider.marketSuggestions.entries
                     .where((e) => e.value.isNotEmpty)
                     .toList();
                 if (categories.isEmpty &&
+                    suggestionWidgets.isEmpty &&
                     suggestionsProvider.status == SuggestionsStatus.loaded) {
                   return SliverToBoxAdapter(
                       child: Padding(
@@ -323,15 +339,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                     color: Theme.of(context).hintColor))),
                   ));
                 }
-                if (categories.isEmpty) {
-                  // Se ainda está carregando ou erro, já foi tratado. Se chegou aqui e é vazio, não mostra nada.
-                  return const SliverToBoxAdapter(child: SizedBox.shrink());
-                }
 
-                List<Widget> flatListOfMarketContent = [];
                 for (var category in categories) {
                   String title = _getMarketCategoryTitle(category.key);
-                  flatListOfMarketContent.add(Padding(
+                  suggestionWidgets.add(Padding(
                     padding: const EdgeInsets.only(
                         top: 18, left: 16, right: 16, bottom: 8),
                     child: Text(title,
@@ -340,20 +351,28 @@ class _HomeScreenState extends State<HomeScreen> {
                             .titleLarge
                             ?.copyWith(fontWeight: FontWeight.w600)),
                   ));
-                  flatListOfMarketContent.addAll(category.value
+                  suggestionWidgets.addAll(category.value
                       .map((bet) => MarketSuggestionCardWidget(
-                          potentialBet: bet, marketCategoryTitle: title))
+                          potentialBet: bet,
+                          marketCategoryTitle:
+                              title // Passando o título da categoria para o card
+                          ))
                       .toList());
-                  flatListOfMarketContent.add(const SizedBox(height: 10));
+                  suggestionWidgets.add(const SizedBox(height: 10));
                 }
+
+                if (suggestionWidgets.isEmpty) {
+                  // Se, após tudo, ainda estiver vazio (mas não erro/loading inicial)
+                  return const SliverToBoxAdapter(child: SizedBox.shrink());
+                }
+
                 return SliverList(
-                    delegate: SliverChildListDelegate(flatListOfMarketContent));
+                    delegate: SliverChildListDelegate(suggestionWidgets));
               },
             ),
             _buildSectionHeaderSliver(context, "Explorar Ligas 🌍"),
             Consumer<LeagueProvider>(
               builder: (context, leagueProvider, child) {
-                // Lógica de loading/error/empty/loaded para ligas
                 if (leagueProvider.status == LeagueStatus.loading &&
                     leagueProvider.leagues.isEmpty) {
                   return const LoadingIndicatorWidget(
@@ -377,6 +396,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         leagueProvider.fetchLeagues(forceRefresh: true),
                     showRetryButton: true,
                   );
+                }
+                if (leagueProvider.leagues.isEmpty) {
+                  // Se ainda estiver vazio, mas não erro/loading
+                  return const SliverToBoxAdapter(child: SizedBox.shrink());
                 }
                 return SliverPadding(
                   padding:
