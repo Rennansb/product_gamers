@@ -98,10 +98,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'App Prognósticos Expert',
+    return MaterialApp(
+      title: 'App Prognósticos Expert V3',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.darkGoldTheme,
+
       // ... (theme, locale, etc.)
-      home: AppShell(), // HomeScreen está ABAIXO do MultiProvider na árvore
+      home:
+          const AppShell(), // HomeScreen está ABAIXO do MultiProvider na árvore
     );
   }
 }

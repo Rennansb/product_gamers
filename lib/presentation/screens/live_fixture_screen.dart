@@ -1,6 +1,7 @@
 // lib/presentation/screens/live_fixture_screen.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:product_gamers/core/theme/app_theme.dart';
 import 'package:product_gamers/domain/entities/entities/fixture.dart';
 import 'package:product_gamers/domain/entities/entities/live_bet_suggestion.dart';
 import 'package:product_gamers/domain/entities/entities/live_fixture_update.dart';
@@ -232,31 +233,39 @@ class LiveFixtureScreen extends StatelessWidget {
   }
 
   // Helper para logo, similar ao de FixtureCardWidget e FixtureDetailScreen
+  // Exemplo de como _buildTeamLogo pode ser ajustado nos widgets
+// Exemplo de como _buildTeamLogo pode ser ajustado nos widgets
   Widget _buildTeamLogo(String? logoUrl, BuildContext context,
-      {double size = 40}) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final placeholderColor =
-        Theme.of(context).colorScheme.primary.withOpacity(0.08);
-    final iconColor = Theme.of(context).colorScheme.primary.withOpacity(0.7);
+      {double size = 38}) {
+    final Color circleBackgroundColor = AppTheme.darkCardSurface
+        .withOpacity(0.5); // Cor de fundo para o círculo do logo
+    final Color placeholderIconColor = AppTheme.textWhite54;
+    final Color progressColor = AppTheme.goldAccentLight;
+    final Color circleBorderColor = AppTheme.subtleBorder.withOpacity(0.7);
 
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: circleBackgroundColor,
+        shape: BoxShape.circle,
+        border: Border.all(color: circleBorderColor, width: 1), // Borda dourada
+      ),
       clipBehavior: Clip.antiAlias,
       child: logoUrl != null && logoUrl.isNotEmpty
           ? CachedNetworkImage(
               imageUrl: logoUrl,
               fit: BoxFit.contain,
+              fadeInDuration: const Duration(milliseconds: 300),
               placeholder: (context, url) => Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: EdgeInsets.all(size * 0.25),
                 child: CircularProgressIndicator(
-                    strokeWidth: 1.5, color: iconColor),
+                    strokeWidth: 1.5, color: progressColor),
               ),
               errorWidget: (context, url, error) => Icon(Icons.shield_outlined,
-                  size: size * 0.6, color: iconColor),
+                  size: size * 0.55, color: placeholderIconColor),
             )
-          : Icon(Icons.shield, size: size * 0.6, color: iconColor),
+          : Icon(Icons.shield, size: size * 0.55, color: placeholderIconColor),
     );
   }
 

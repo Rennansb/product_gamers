@@ -1,5 +1,6 @@
 // lib/presentation/app_shell.dart
 import 'package:flutter/material.dart';
+import 'package:product_gamers/core/theme/app_theme.dart';
 import 'package:product_gamers/presentation/screens/home_screen.dart'; // Nossa tela inicial existente
 import 'screens/live_games_screen.dart'; // Nova tela placeholder
 import 'screens/history_screen.dart'; // Nova tela placeholder
@@ -38,39 +39,47 @@ class _AppShellState extends State<AppShell> {
         index: _selectedIndex,
         children: _widgetOptions,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Início',
+      bottomNavigationBar: Container(
+        // Envolver com Container
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+                color: AppTheme.goldAccent.withOpacity(0.6),
+                width: 0.8), // Linha dourada no topo
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.sports_soccer_outlined),
-            activeIcon: Icon(Icons.sports_soccer),
-            label: 'Ao Vivo',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history_outlined),
-            activeIcon: Icon(Icons.history),
-            label: 'Histórico',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Perfil',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor:
-            Theme.of(context).colorScheme.primary, // Cor do item selecionado
-        unselectedItemColor: Colors.grey[600], // Cor dos itens não selecionados
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType
-            .fixed, // Para mais de 3 itens, garante que todos apareçam
-        showUnselectedLabels: true, // Mostrar labels dos itens não selecionados
-        // backgroundColor: Theme.of(context).cardColor, // Cor de fundo da barra (opcional)
-        elevation: 8.0, // Sombra da barra
+          // A cor de fundo virá do BottomNavigationBarTheme ou pode ser definida aqui
+          // color: AppTheme.slightlyLighterDark,
+        ),
+        child: BottomNavigationBar(
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Início',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.sports_soccer_outlined),
+              activeIcon: Icon(Icons.sports_soccer),
+              label: 'Ao Vivo',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.history_outlined),
+              activeIcon: Icon(Icons.history),
+              label: 'Histórico',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Perfil',
+            ),
+          ],
+          currentIndex: _selectedIndex,
+          // selectedItemColor e unselectedItemColor virão do BottomNavigationBarTheme
+          onTap: _onItemTapped,
+          type: BottomNavigationBarType.fixed,
+          // backgroundColor: Colors.transparent, // Deixar transparente se o Container já tem cor
+          // Ou deixar o tema cuidar disso.
+        ),
       ),
     );
   }
