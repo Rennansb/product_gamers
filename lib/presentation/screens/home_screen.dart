@@ -232,6 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final Color onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
 
     return Scaffold(
+      // backgroundColor: Colors.black,
       body: RefreshIndicator(
         onRefresh: () =>
             _fetchAllInitialData(forceRefresh: true, calledFrom: "onRefresh"),

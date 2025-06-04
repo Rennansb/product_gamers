@@ -1,4 +1,138 @@
 // lib/presentation/providers/league_provider.dart
+import 'package:flutter/foundation.dart';
+import 'package:product_gamers/core/config/failure.dart';
+import 'package:product_gamers/domain/entities/entities/league.dart';
+
+import '../../domain/usecases/get_leagues_usecase.dart';
+
+enum LeagueStatus { initial, loading, loaded, error, empty }
+
+class LeagueProvider with ChangeNotifier {
+  final GetLeaguesUseCase _getLeaguesUseCase;
+
+  LeagueProvider(this._getLeaguesUseCase);
+
+  LeagueStatus _status = LeagueStatus.initial;
+  List<League> _leagues = [];
+  String? _errorMessage;
+  bool _isDisposed = false;
+
+  LeagueStatus get status => _status;
+  List<League> get leagues => _leagues;
+  String? get errorMessage => _errorMessage;
+
+  // Flag para controlar se usamos dados mockados
+  final bool _useMockData = true; // Mude para false para usar a API real
+
+  Future<void> fetchLeagues({bool forceRefresh = false}) async {
+    if (_isDisposed) return;
+    if (_status == LeagueStatus.loading && !forceRefresh) return;
+    // ... (lógica de prevenção de fetch como antes)
+
+    _status = LeagueStatus.loading;
+    _errorMessage = null;
+    if (forceRefresh) _leagues = [];
+
+    Future.microtask(() {
+      if (!_isDisposed && _status == LeagueStatus.loading) notifyListeners();
+    });
+
+    if (kDebugMode)
+      print(
+          "LeagueProvider: Buscando ligas... (mock: $_useMockData, forceRefresh: $forceRefresh)");
+
+    if (_useMockData) {
+      await Future.delayed(
+          const Duration(milliseconds: 800)); // Simula delay da rede
+      if (_isDisposed) return;
+      _leagues = [
+        const League(
+            id: 39,
+            name: "Premier League",
+            type: "League",
+            logoUrl: "https://media.api-sports.io/football/leagues/39.png",
+            countryName: "England",
+            currentSeasonYear: 2023,
+            friendlyName: "Premier League (ING)"),
+        const League(
+            id: 140,
+            name: "La Liga",
+            type: "League",
+            logoUrl: "https://media.api-sports.io/football/leagues/140.png",
+            countryName: "Spain",
+            currentSeasonYear: 2023,
+            friendlyName: "La Liga (ESP)"),
+        const League(
+            id: 71,
+            name: "Serie A",
+            type: "League",
+            logoUrl: "https://media.api-sports.io/football/leagues/71.png",
+            countryName: "Brazil",
+            currentSeasonYear: 2024,
+            friendlyName: "Brasileirão Série A (BRA)"),
+        const League(
+            id: 135,
+            name: "Serie A",
+            type: "League",
+            logoUrl: "https://media.api-sports.io/football/leagues/135.png",
+            countryName: "Italy",
+            currentSeasonYear: 2023,
+            friendlyName: "Serie A (ITA)"),
+      ];
+      _status = _leagues.isEmpty ? LeagueStatus.empty : LeagueStatus.loaded;
+      if (_leagues.isEmpty) _errorMessage = "Nenhuma liga mockada configurada.";
+      if (kDebugMode)
+        print(
+            "LeagueProvider: Ligas mockadas carregadas - ${_leagues.length} ligas.");
+    } else {
+      // ===== CÓDIGO REAL DA API (MANTIDO COMENTADO) =====
+      // final result = await _getLeaguesUseCase();
+      // if (_isDisposed) return;
+      // if (_status == LeagueStatus.loading) {
+      //   result.fold(
+      //     (failure) {
+      //       _errorMessage = _mapFailureToMessage(failure);
+      //       _status = LeagueStatus.error;
+      //       _leagues = [];
+      //       if (kDebugMode) print("LeagueProvider: Erro ao buscar ligas - $_errorMessage");
+      //     },
+      //     (leaguesData) {
+      //       _leagues = leaguesData;
+      //       if (_leagues.isEmpty) {
+      //         _errorMessage = "Nenhuma liga popular foi encontrada ou configurada.";
+      //         _status = LeagueStatus.empty;
+      //         if (kDebugMode) print("LeagueProvider: Nenhuma liga encontrada.");
+      //       } else {
+      //         _status = LeagueStatus.loaded;
+      //         if (kDebugMode) print("LeagueProvider: Ligas carregadas - ${_leagues.length} ligas.");
+      //       }
+      //     },
+      //   );
+      // }
+      // ====================================================
+      // Simular erro se o código da API estiver comentado
+      await Future.delayed(const Duration(milliseconds: 300));
+      _errorMessage = "API real desativada (usando mock).";
+      _status = LeagueStatus.error;
+    }
+    if (!_isDisposed) notifyListeners();
+  }
+
+  String _mapFailureToMessage(Failure failure) {
+    /* ... como antes ... */ return failure.message;
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    if (kDebugMode) print("LeagueProvider disposed.");
+    super.dispose();
+  }
+}
+
+
+// lib/presentation/providers/league_provider.dart
+/*
 import 'package:flutter/foundation.dart'; // Para ChangeNotifier e kDebugMode
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -146,3 +280,7 @@ class LeagueProvider with ChangeNotifier {
     super.dispose();
   }
 }
+
+
+
+*/

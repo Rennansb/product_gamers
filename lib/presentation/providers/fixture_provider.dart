@@ -1,4 +1,132 @@
 // lib/presentation/providers/fixture_provider.dart
+import 'package:flutter/foundation.dart';
+import 'package:product_gamers/core/config/failure.dart';
+import 'package:product_gamers/domain/entities/entities/fixture.dart';
+import 'package:product_gamers/domain/entities/entities/fixture_league_info_entity.dart';
+import 'package:product_gamers/domain/entities/entities/team.dart';
+// Para FixtureLeagueInfoEntity
+import '../../domain/usecases/get_fixtures_usecase.dart';
+
+enum FixtureListStatus { initial, loading, loaded, error, empty }
+
+class FixtureProvider with ChangeNotifier {
+  final GetFixturesUseCase _getFixturesUseCase;
+  final int leagueId;
+  final String season;
+  bool _isDisposed = false;
+
+  FixtureProvider({
+    required GetFixturesUseCase getFixturesUseCase,
+    required this.leagueId,
+    required this.season,
+  }) : _getFixturesUseCase = getFixturesUseCase;
+
+  FixtureListStatus _status = FixtureListStatus.initial;
+  List<Fixture> _fixtures = [];
+  String? _errorMessage;
+
+  FixtureListStatus get status => _status;
+  List<Fixture> get fixtures => _fixtures;
+  String? get errorMessage => _errorMessage;
+
+  final bool _useMockData = true; // Mude para false para usar a API real
+
+  Future<void> fetchFixtures(
+      {bool forceRefresh = false, int gamesToFetch = 5}) async {
+    // Reduzido gamesToFetch para mocks
+    if (_isDisposed) return;
+    if (_status == FixtureListStatus.loading && !forceRefresh) return;
+    // ... (lógica de prevenção de fetch)
+
+    _status = FixtureListStatus.loading;
+    _errorMessage = null;
+    if (forceRefresh) _fixtures = [];
+
+    Future.microtask(() {
+      if (!_isDisposed && _status == FixtureListStatus.loading)
+        notifyListeners();
+    });
+
+    if (kDebugMode)
+      print(
+          "FixtureProvider: Buscando jogos para liga $leagueId (mock: $_useMockData)...");
+
+    if (_useMockData) {
+      await Future.delayed(const Duration(milliseconds: 700));
+      if (_isDisposed) return;
+
+      // Criar alguns Fixtures mockados
+      // Usar o leagueId para diferenciar um pouco os mocks
+      String leagueNameMock = "Liga Mock $leagueId";
+      if (leagueId == 39) leagueNameMock = "Premier League Mock";
+      if (leagueId == 71) leagueNameMock = "Brasileirão Mock";
+
+      _fixtures = List.generate(gamesToFetch, (index) {
+        final homeTeamId = leagueId * 100 + index * 2;
+        final awayTeamId = leagueId * 100 + index * 2 + 1;
+        return Fixture(
+            id: leagueId * 1000 + index,
+            date:
+                DateTime.now().add(Duration(days: index + 1, hours: index * 2)),
+            statusShort: "NS",
+            statusLong: "Not Started",
+            homeTeam: TeamInFixture(
+                id: homeTeamId,
+                name: "Time Casa ${index + 1}",
+                logoUrl:
+                    "https://media.api-sports.io/football/teams/$homeTeamId.png"),
+            awayTeam: TeamInFixture(
+                id: awayTeamId,
+                name: "Time Fora ${index + 1}",
+                logoUrl:
+                    "https://media.api-sports.io/football/teams/$awayTeamId.png"),
+            league: FixtureLeagueInfoEntity(
+                id: leagueId,
+                name: leagueNameMock,
+                season: int.tryParse(season)),
+            refereeName: "Arbitro Mock ${index + 1}",
+            venueName: "Estádio Mock ${index + 1}");
+      });
+      _status = _fixtures.isEmpty
+          ? FixtureListStatus.empty
+          : FixtureListStatus.loaded;
+      if (_fixtures.isEmpty)
+        _errorMessage = "Nenhum jogo mockado para liga $leagueId.";
+      if (kDebugMode)
+        print(
+            "FixtureProvider: Jogos mockados carregados para liga $leagueId - ${_fixtures.length} jogos.");
+    } else {
+      // ===== CÓDIGO REAL DA API (MANTIDO COMENTADO) =====
+      // final result = await _getFixturesUseCase(leagueId: leagueId, season: season, nextGames: gamesToFetch);
+      // if (_isDisposed) return;
+      // if (_status == FixtureListStatus.loading) {
+      //   result.fold(
+      //     (failure) { /* ... */ },
+      //     (fixturesData) { /* ... */ },
+      //   );
+      // }
+      // ====================================================
+      await Future.delayed(const Duration(milliseconds: 300));
+      _errorMessage = "API real desativada (usando mock).";
+      _status = FixtureListStatus.error;
+    }
+    if (!_isDisposed) notifyListeners();
+  }
+
+  String _mapFailureToMessage(Failure failure) {
+    /* ... como antes ... */ return failure.message;
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    if (kDebugMode) print("FixtureProvider para liga $leagueId disposed.");
+    super.dispose();
+  }
+}
+
+// lib/presentation/providers/fixture_provider.dart
+/*
 import 'package:flutter/foundation.dart'; // Para ChangeNotifier e kDebugMode
 import 'package:product_gamers/core/config/failure.dart';
 import 'package:product_gamers/domain/entities/entities/fixture.dart';
@@ -117,3 +245,5 @@ class FixtureProvider with ChangeNotifier {
     return 'Erro inesperado ao buscar jogos: ${failure.message}';
   }
 }
+
+*/
