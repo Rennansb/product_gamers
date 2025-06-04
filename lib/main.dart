@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:product_gamers/domain/usecases/get_fixture_lineups_usecase.dart';
+import 'package:product_gamers/presentation/app_shell.dart';
 import 'package:product_gamers/presentation/providers/suggested_slips_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -97,11 +98,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       title: 'App Prognósticos Expert',
       // ... (theme, locale, etc.)
-      home:
-          const HomeScreen(), // HomeScreen está ABAIXO do MultiProvider na árvore
+      home: AppShell(), // HomeScreen está ABAIXO do MultiProvider na árvore
     );
   }
 }
