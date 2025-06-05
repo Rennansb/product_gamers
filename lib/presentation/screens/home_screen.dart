@@ -366,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         suggestionsProvider.accumulatedSlips.forEach((slip) {
                           suggestionWidgets.add(Card(
                               color: AppTheme.darkCardSurface.withOpacity(
-                                  0.7), // Card interno um pouco diferente
+                                  0.2), // Card interno um pouco diferente
                               margin: const EdgeInsets.symmetric(
                                   vertical: 4, horizontal: 4),
                               shape: RoundedRectangleBorder(

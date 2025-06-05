@@ -96,7 +96,8 @@ class MarketSuggestionCardWidget extends StatelessWidget {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
-      elevation: 2.5,
+      elevation: 10.5,
+      color: Colors.black.withOpacity(0.3),
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: InkWell(
@@ -147,7 +148,7 @@ class MarketSuggestionCardWidget extends StatelessWidget {
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: isDarkMode ? Colors.black : Colors.white)),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    backgroundColor: const Color.fromARGB(255, 71, 255, 80),
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     labelStyle: const TextStyle(fontSize: 13),
@@ -160,13 +161,13 @@ class MarketSuggestionCardWidget extends StatelessWidget {
               Row(
                 children: [
                   Icon(Icons.show_chart_rounded,
-                      size: 16, color: Colors.green.shade700),
+                      size: 16, color: Colors.green.shade500),
                   const SizedBox(width: 4),
                   Text(
                     "Prob. Calculada: ${percentFormat.format(selection.probability ?? 0.0)}",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: Colors.green.shade800),
+                        color: Colors.green.shade500),
                   ),
                   const Spacer(),
                   Text(
