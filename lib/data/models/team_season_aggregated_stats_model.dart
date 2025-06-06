@@ -1,53 +1,58 @@
 // lib/data/models/team_season_aggregated_stats_model.dart
 import 'package:equatable/equatable.dart';
+import 'package:product_gamers/core/utils/date_formatter.dart';
 import 'package:product_gamers/domain/entities/entities/team_aggregated_stats.dart';
 
 // Sub-modelo para valores de gols (total e média) dentro de "for" ou "against"
-class AggregatedGoalsStatsValuesModel extends Equatable {
-  final int? totalOverall; // O valor de "total" dentro do sub-objeto "total"
+class AggregatedNumericValueModel extends Equatable {
+  final int?
+      totalOverall; // Representa o valor de "total" dentro de um sub-objeto "total" ou um "total" direto.
   final double?
-      averageOverall; // O valor de "total" dentro do sub-objeto "average"
+      averageOverall; // Representa o valor de "total" dentro de um sub-objeto "average" ou uma "average" direta.
 
-  const AggregatedGoalsStatsValuesModel(
-      {this.totalOverall, this.averageOverall});
+  const AggregatedNumericValueModel({this.totalOverall, this.averageOverall});
 
-  factory AggregatedGoalsStatsValuesModel.fromJson(Map<String, dynamic>? json) {
-    if (json == null) return const AggregatedGoalsStatsValuesModel();
+  factory AggregatedNumericValueModel.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const AggregatedNumericValueModel();
 
-    // A API-Football tem:
-    // json['for']['total']['total'] para o total de gols marcados
-    // json['for']['average']['total'] para a média de gols marcados (como string)
-
-    // Esta factory espera o objeto que está DENTRO de "for" ou "against",
-    // ou seja, o objeto que contém as chaves "total" e "average".
-    // Ex: json = {"total": {"home": 20, "away": 15, "total": 35}, "average": {"home": "2.0", ...}}
+    // A API da API-Football para /teams/statistics em "goals" e "corners" tem:
+    // "for": { "total": {"total": X}, "average": {"total": Y_str_or_num} }
+    // O 'json' aqui é o conteúdo de "for" ou "against"
 
     int? parsedTotal;
     if (json['total'] is Map) {
+      // Se "total" é um objeto, pegue o sub-campo "total"
       parsedTotal = (json['total'] as Map<String, dynamic>)['total'] as int?;
     } else if (json['total'] is int) {
-      // Caso a API mude para um int direto
+      // Se "total" é um int direto (menos comum para esta API neste nó)
       parsedTotal = json['total'] as int?;
+    } else if (json['total'] is String) {
+      // Se for string, tentar parsear
+      parsedTotal = int.tryParse(json['total']);
     }
 
     double? parsedAverage;
     if (json['average'] is Map) {
+      // Se "average" é um objeto, pegue o sub-campo "total"
       parsedAverage = double.tryParse(
           (json['average'] as Map<String, dynamic>)['total']?.toString() ?? "");
     } else if (json['average'] != null) {
-      // Caso a API mude para um double/string direto
-      parsedAverage = double.tryParse(json['average'].toString());
+      // Se "average" é um num ou string direto
+      parsedAverage = (json['average'] is num)
+          ? (json['average'] as num).toDouble()
+          : double.tryParse(json['average'].toString());
     }
 
-    return AggregatedGoalsStatsValuesModel(
+    return AggregatedNumericValueModel(
       totalOverall: parsedTotal,
       averageOverall: parsedAverage,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        // Para consistência, embora não usado para enviar
-        'total': {'total': totalOverall},
+        'total': {
+          'total': totalOverall
+        }, // Mantém a estrutura aninhada para consistência
         'average': {'total': averageOverall?.toStringAsFixed(2)}
       };
 
@@ -55,79 +60,34 @@ class AggregatedGoalsStatsValuesModel extends Equatable {
   List<Object?> get props => [totalOverall, averageOverall];
 }
 
-// Sub-modelo para o objeto "goals" que contém "for" e "against"
-class AggregatedGoalsModel extends Equatable {
-  final AggregatedGoalsStatsValuesModel? goalsFor; // Para o nó "for"
-  final AggregatedGoalsStatsValuesModel? goalsAgainst; // Para o nó "against"
+// Sub-modelo para "for" e "against" (usado para gols e escanteios)
+class ForAgainstAggregatedModel extends Equatable {
+  final AggregatedNumericValueModel? forStats;
+  final AggregatedNumericValueModel? againstStats;
 
-  const AggregatedGoalsModel({this.goalsFor, this.goalsAgainst});
+  const ForAgainstAggregatedModel({this.forStats, this.againstStats});
 
-  factory AggregatedGoalsModel.fromJson(Map<String, dynamic>? json) {
-    if (json == null) return const AggregatedGoalsModel();
+  factory ForAgainstAggregatedModel.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const ForAgainstAggregatedModel();
     // 'json' aqui é o objeto que contém as chaves "for" e "against"
-    // Ex: json = {"for": {"total": {...}, "average": {...}}, "against": {...}}
-    return AggregatedGoalsModel(
-      goalsFor: AggregatedGoalsStatsValuesModel.fromJson(
+    // Ex: json = {"for": {"total": {...}, "average": {...}}, "against": {"total": {...}, "average": {...}}}
+    return ForAgainstAggregatedModel(
+      forStats: AggregatedNumericValueModel.fromJson(
           json['for'] as Map<String, dynamic>?),
-      goalsAgainst: AggregatedGoalsStatsValuesModel.fromJson(
+      againstStats: AggregatedNumericValueModel.fromJson(
           json['against'] as Map<String, dynamic>?),
     );
   }
-
-  Map<String, dynamic> toJson() => {
-        'for': goalsFor?.toJson(),
-        'against': goalsAgainst?.toJson(),
-      };
-
+  Map<String, dynamic> toJson() =>
+      {'for': forStats?.toJson(), 'against': againstStats?.toJson()};
   @override
-  List<Object?> get props => [goalsFor, goalsAgainst];
-}
-
-// Sub-modelo para escanteios (reutiliza AggregatedGoalsStatsValuesModel para a estrutura de total/average)
-class AggregatedCornersModel extends Equatable {
-  final AggregatedGoalsStatsValuesModel? cornersFor;
-  final AggregatedGoalsStatsValuesModel? cornersAgainst;
-
-  const AggregatedCornersModel({this.cornersFor, this.cornersAgainst});
-
-  factory AggregatedCornersModel.fromJson(Map<String, dynamic>? json) {
-    if (json == null) return const AggregatedCornersModel();
-    // Seu JSON de exemplo para escanteios em /teams/statistics:
-    // "corners": { "total": { "for": 180, "against": 160 }, "average": { "for": 6.0, "against": 5.33 } }
-    // Precisamos criar Maps para simular a estrutura que AggregatedGoalsStatsValuesModel.fromJson espera
-
-    Map<String, dynamic>? forData =
-        (json['total']?['for'] != null || json['average']?['for'] != null)
-            ? {
-                'total': {
-                  'total': json['total']?['for']
-                }, // Passando o total geral
-                'average': {
-                  'total': json['average']?['for']
-                } // Passando a média geral
-              }
-            : null;
-
-    Map<String, dynamic>? againstData = (json['total']?['against'] != null ||
-            json['average']?['against'] != null)
-        ? {
-            'total': {'total': json['total']?['against']},
-            'average': {'total': json['average']?['against']}
-          }
-        : null;
-
-    return AggregatedCornersModel(
-      cornersFor: AggregatedGoalsStatsValuesModel.fromJson(forData),
-      cornersAgainst: AggregatedGoalsStatsValuesModel.fromJson(againstData),
-    );
-  }
-  @override
-  List<Object?> get props => [cornersFor, cornersAgainst];
+  List<Object?> get props => [forStats, againstStats];
 }
 
 // Sub-modelo para um tipo de cartão (amarelo ou vermelho) e seus totais
 class AggregatedCardDetailModel extends Equatable {
   final int? totalOverall;
+
   const AggregatedCardDetailModel({this.totalOverall});
 
   factory AggregatedCardDetailModel.fromJson(
@@ -135,25 +95,33 @@ class AggregatedCardDetailModel extends Equatable {
     if (jsonPeriodMap == null)
       return const AggregatedCardDetailModel(totalOverall: 0);
 
+    // API-Football /teams/statistics/cards/yellow (ou red) pode ter um campo "total" no nível superior
+    // OU precisa somar os períodos ("0-15", "16-30", etc.)
     if (jsonPeriodMap['total'] is int) {
-      // Checa se já existe um total geral fornecido
       return AggregatedCardDetailModel(
           totalOverall: jsonPeriodMap['total'] as int);
     }
-    // Se não, soma os períodos
+
     int sumTotal = 0;
     jsonPeriodMap.forEach((periodKey, periodStats) {
-      if (periodStats is Map<String, dynamic> && periodStats['total'] is int) {
+      // Evitar somar o próprio campo 'total' se ele existir como string ou nulo e não for int
+      if (periodKey != 'total' &&
+          periodStats is Map<String, dynamic> &&
+          periodStats['total'] is int) {
         sumTotal += periodStats['total'] as int;
       }
     });
-    return AggregatedCardDetailModel(totalOverall: sumTotal);
+    // Retorna nulo se a soma for 0, indicando que não há dados de período ou todos são 0.
+    // Ou retorna 0 se preferir. Para médias, nulo é melhor para evitar divisão por zero se gamesPlayed também for 0.
+    return AggregatedCardDetailModel(
+        totalOverall: sumTotal > 0 ? sumTotal : null);
   }
+  Map<String, dynamic> toJson() => {'totalOverall': totalOverall};
   @override
   List<Object?> get props => [totalOverall];
 }
 
-// Sub-modelo para todos os cartões
+// Sub-modelo para todos os cartões (amarelo e vermelho)
 class AggregatedCardsModel extends Equatable {
   final AggregatedCardDetailModel? yellow;
   final AggregatedCardDetailModel? red;
@@ -168,10 +136,13 @@ class AggregatedCardsModel extends Equatable {
           json['red'] as Map<String, dynamic>?),
     );
   }
+  Map<String, dynamic> toJson() =>
+      {'yellow': yellow?.toJson(), 'red': red?.toJson()};
   @override
   List<Object?> get props => [yellow, red];
 }
 
+// Modelo Principal para Estatísticas Agregadas da Temporada de um Time
 class TeamSeasonAggregatedStatsModel extends Equatable {
   final int teamId;
   final int leagueId;
@@ -185,17 +156,18 @@ class TeamSeasonAggregatedStatsModel extends Equatable {
   final int? lossesTotal;
   final String? form;
 
-  final AggregatedGoalsModel? goalsStats; // Usando o modelo corrigido
-  final AggregatedCornersModel? cornersStats;
+  final ForAgainstAggregatedModel? goalsStats;
+  final ForAgainstAggregatedModel?
+      cornersStats; // Usando o modelo ForAgainstAggregatedModel
   final AggregatedCardsModel? cardsStats;
 
-  // Campos de médias calculadas/obtidas para a entidade
-  final double? avgGoalsScoredPerGame;
-  final double? avgGoalsConcededPerGame;
-  final double? avgCornersGeneratedPerGame;
-  final double? avgCornersConcededPerGame;
-  final double? avgYellowCardsPerGame;
-  final double? avgRedCardsPerGame;
+  // Campos de médias que este MODELO armazena, derivados dos dados parseados.
+  final double? finalAvgGoalsScoredPerGame;
+  final double? finalAvgGoalsConcededPerGame;
+  final double? finalAvgCornersGeneratedPerGame;
+  final double? finalAvgCornersConcededPerGame;
+  final double? finalAvgYellowCardsPerGame;
+  final double? finalAvgRedCardsPerGame;
 
   const TeamSeasonAggregatedStatsModel({
     required this.teamId,
@@ -211,73 +183,78 @@ class TeamSeasonAggregatedStatsModel extends Equatable {
     this.goalsStats,
     this.cornersStats,
     this.cardsStats,
-    this.avgGoalsScoredPerGame,
-    this.avgGoalsConcededPerGame,
-    this.avgCornersGeneratedPerGame,
-    this.avgCornersConcededPerGame,
-    this.avgYellowCardsPerGame,
-    this.avgRedCardsPerGame,
+    this.finalAvgGoalsScoredPerGame,
+    this.finalAvgGoalsConcededPerGame,
+    this.finalAvgCornersGeneratedPerGame,
+    this.finalAvgCornersConcededPerGame,
+    this.finalAvgYellowCardsPerGame,
+    this.finalAvgRedCardsPerGame,
   });
 
-  factory TeamSeasonAggregatedStatsModel.fromJson(Map<String, dynamic> json,
-      int reqTeamId, int reqLeagueId, String reqSeason) {
-    final leagueData = json['league'] ?? {};
-    final teamDataAPI = json['team'] ?? {};
-    final fixturesData = json['fixtures'] ?? {};
+  // ===== FACTORY fromJson COM OS PARÂMETROS NOMEADOS CORRIGIDOS PARA FALLBACK =====
+  factory TeamSeasonAggregatedStatsModel.fromJson(
+    Map<String, dynamic> json, {
+    // json é o objeto raiz da resposta de /teams/statistics para um time
+    // Parâmetros nomeados opcionais para fallback, usados se a API não fornecer no corpo
+    int? fallbackTeamId,
+    int? fallbackLeagueId,
+    String? fallbackSeason,
+  }) {
+    final leagueData = json['league'] as Map<String, dynamic>? ?? {};
+    final teamDataAPI = json['team'] as Map<String, dynamic>? ?? {};
+    final fixturesData = json['fixtures'] as Map<String, dynamic>? ?? {};
 
-    // Acessando os nós corretos baseados no seu JSON de exemplo
     final goalsDataFromApi = json['goals'] as Map<String, dynamic>?;
-    // Para escanteios, o seu JSON exemplo mostra: json['statistics']['corners']
-    final cornersDataFromApi = (json['statistics']
-        as Map<String, dynamic>?)?['corners'] as Map<String, dynamic>?;
+    // O seu exemplo de JSON para /teams/statistics mostrava 'corners' no mesmo nível de 'goals'
+    final cornersDataFromApi = json['corners'] as Map<String, dynamic>?;
     final cardsDataFromApi = json['cards'] as Map<String, dynamic>?;
 
     int? gamesPlayed = fixturesData['played']?['total'] as int?;
 
-    AggregatedGoalsModel parsedGoals =
-        AggregatedGoalsModel.fromJson(goalsDataFromApi);
-    AggregatedCornersModel parsedCorners =
-        AggregatedCornersModel.fromJson(cornersDataFromApi);
+    ForAgainstAggregatedModel parsedGoals =
+        ForAgainstAggregatedModel.fromJson(goalsDataFromApi);
+    ForAgainstAggregatedModel parsedCorners =
+        ForAgainstAggregatedModel.fromJson(cornersDataFromApi);
     AggregatedCardsModel parsedCards =
         AggregatedCardsModel.fromJson(cardsDataFromApi);
 
-    double? calculatedAvgGoalsScored =
-        parsedGoals.goalsFor?.averageOverall; // Usa a média direto da API
+    // Calcular médias se não fornecidas diretamente ou se quisermos recalcular
+    double? calculatedAvgGoalsScored = parsedGoals.forStats?.averageOverall;
     if (calculatedAvgGoalsScored == null &&
-        parsedGoals.goalsFor?.totalOverall != null &&
+        parsedGoals.forStats?.totalOverall != null &&
         gamesPlayed != null &&
         gamesPlayed > 0) {
       calculatedAvgGoalsScored =
-          parsedGoals.goalsFor!.totalOverall! / gamesPlayed;
+          parsedGoals.forStats!.totalOverall! / gamesPlayed;
     }
 
     double? calculatedAvgGoalsConceded =
-        parsedGoals.goalsAgainst?.averageOverall;
+        parsedGoals.againstStats?.averageOverall;
     if (calculatedAvgGoalsConceded == null &&
-        parsedGoals.goalsAgainst?.totalOverall != null &&
+        parsedGoals.againstStats?.totalOverall != null &&
         gamesPlayed != null &&
         gamesPlayed > 0) {
       calculatedAvgGoalsConceded =
-          parsedGoals.goalsAgainst!.totalOverall! / gamesPlayed;
+          parsedGoals.againstStats!.totalOverall! / gamesPlayed;
     }
 
-    double? calculatedAvgCornersGen =
-        parsedCorners.cornersFor?.averageOverall; // Usa a média direto da API
+    double? calculatedAvgCornersGen = parsedCorners
+        .forStats?.averageOverall; // Usa a média direta da API para escanteios
     if (calculatedAvgCornersGen == null &&
-        parsedCorners.cornersFor?.totalOverall != null &&
+        parsedCorners.forStats?.totalOverall != null &&
         gamesPlayed != null &&
         gamesPlayed > 0) {
       calculatedAvgCornersGen =
-          parsedCorners.cornersFor!.totalOverall! / gamesPlayed;
+          parsedCorners.forStats!.totalOverall! / gamesPlayed;
     }
-    double? calculatedAvgCornersCon = parsedCorners
-        .cornersAgainst?.averageOverall; // Usa a média direto da API
+    double? calculatedAvgCornersCon = parsedCorners.againstStats
+        ?.averageOverall; // Usa a média direta da API para escanteios
     if (calculatedAvgCornersCon == null &&
-        parsedCorners.cornersAgainst?.totalOverall != null &&
+        parsedCorners.againstStats?.totalOverall != null &&
         gamesPlayed != null &&
         gamesPlayed > 0) {
       calculatedAvgCornersCon =
-          parsedCorners.cornersAgainst!.totalOverall! / gamesPlayed;
+          parsedCorners.againstStats!.totalOverall! / gamesPlayed;
     }
 
     double? calculatedAvgYellows = (gamesPlayed != null &&
@@ -292,11 +269,13 @@ class TeamSeasonAggregatedStatsModel extends Equatable {
         : null;
 
     return TeamSeasonAggregatedStatsModel(
-      teamId: teamDataAPI['id'] as int? ?? reqTeamId,
-      leagueId: leagueData['id'] as int? ?? reqLeagueId,
+      teamId: teamDataAPI['id'] as int? ?? fallbackTeamId ?? 0,
+      leagueId: leagueData['id'] as int? ?? fallbackLeagueId ?? 0,
       leagueName: leagueData['name'] as String? ?? 'N/A',
       leagueLogoUrl: leagueData['logo'] as String?,
-      season: leagueData['season']?.toString() ?? reqSeason,
+      season: leagueData['season']?.toString() ??
+          fallbackSeason ??
+          DateFormatter.getYear(DateTime.now()),
       playedTotal: gamesPlayed,
       winsTotal: fixturesData['wins']?['total'] as int?,
       drawsTotal: fixturesData['draws']?['total'] as int?,
@@ -305,31 +284,35 @@ class TeamSeasonAggregatedStatsModel extends Equatable {
       goalsStats: parsedGoals,
       cornersStats: parsedCorners,
       cardsStats: parsedCards,
-      avgGoalsScoredPerGame: calculatedAvgGoalsScored,
-      avgGoalsConcededPerGame: calculatedAvgGoalsConceded,
-      avgCornersGeneratedPerGame: calculatedAvgCornersGen,
-      avgCornersConcededPerGame: calculatedAvgCornersCon,
-      avgYellowCardsPerGame: calculatedAvgYellows,
-      avgRedCardsPerGame: calculatedAvgReds,
+      finalAvgGoalsScoredPerGame: calculatedAvgGoalsScored,
+      finalAvgGoalsConcededPerGame: calculatedAvgGoalsConceded,
+      finalAvgCornersGeneratedPerGame: calculatedAvgCornersGen,
+      finalAvgCornersConcededPerGame: calculatedAvgCornersCon,
+      finalAvgYellowCardsPerGame: calculatedAvgYellows,
+      finalAvgRedCardsPerGame: calculatedAvgReds,
     );
   }
+  // ====================================================================
 
   TeamAggregatedStats toEntity() {
     return TeamAggregatedStats(
-      teamId: teamId, leagueId: leagueId, leagueName: leagueName,
+      teamId: teamId,
+      leagueId: leagueId,
+      leagueName: leagueName,
       season: season,
-      played: playedTotal ?? 0, wins: winsTotal ?? 0, draws: drawsTotal ?? 0,
+      played: playedTotal ?? 0,
+      wins: winsTotal ?? 0,
+      draws: drawsTotal ?? 0,
       losses: lossesTotal ?? 0,
-      goalsFor: goalsStats?.goalsFor?.totalOverall ?? 0, // Usa totalOverall
-      goalsAgainst:
-          goalsStats?.goalsAgainst?.totalOverall ?? 0, // Usa totalOverall
+      goalsFor: goalsStats?.forStats?.totalOverall ?? 0,
+      goalsAgainst: goalsStats?.againstStats?.totalOverall ?? 0,
       formStreak: form,
-      averageGoalsScoredPerGame: avgGoalsScoredPerGame,
-      averageGoalsConcededPerGame: avgGoalsConcededPerGame,
-      averageCornersGeneratedPerGame: avgCornersGeneratedPerGame,
-      averageCornersConcededPerGame: avgCornersConcededPerGame,
-      averageYellowCardsPerGame: avgYellowCardsPerGame,
-      averageRedCardsPerGame: avgRedCardsPerGame,
+      averageGoalsScoredPerGame: finalAvgGoalsScoredPerGame,
+      averageGoalsConcededPerGame: finalAvgGoalsConcededPerGame,
+      averageCornersGeneratedPerGame: finalAvgCornersGeneratedPerGame,
+      averageCornersConcededPerGame: finalAvgCornersConcededPerGame,
+      averageYellowCardsPerGame: finalAvgYellowCardsPerGame,
+      averageRedCardsPerGame: finalAvgRedCardsPerGame,
     );
   }
 
@@ -348,11 +331,11 @@ class TeamSeasonAggregatedStatsModel extends Equatable {
         goalsStats,
         cornersStats,
         cardsStats,
-        avgGoalsScoredPerGame,
-        avgGoalsConcededPerGame,
-        avgCornersGeneratedPerGame,
-        avgCornersConcededPerGame,
-        avgYellowCardsPerGame,
-        avgRedCardsPerGame
+        finalAvgGoalsScoredPerGame,
+        finalAvgGoalsConcededPerGame,
+        finalAvgCornersGeneratedPerGame,
+        finalAvgCornersConcededPerGame,
+        finalAvgYellowCardsPerGame,
+        finalAvgRedCardsPerGame
       ];
 }

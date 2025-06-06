@@ -8,14 +8,10 @@ import '../repositories/football_repository.dart';
 class GetRefereeStatsUseCase {
   final FootballRepository repository;
   GetRefereeStatsUseCase(this.repository);
-
-  Future<Future<Either<Failure, RefereeStats?>>> call({
-    required int refereeId, // Assumindo que temos o ID
+  Future<Either<Failure, RefereeStats?>> call({
+    required int refereeId,
     required String season,
-  }) async {
-    return repository.getRefereeDetailsAndAggregateStats(
-      refereeId: refereeId,
-      season: season,
-    );
-  }
+  }) async =>
+      repository.getRefereeDetailsAndAggregateStats(
+          refereeId: refereeId, season: season);
 }

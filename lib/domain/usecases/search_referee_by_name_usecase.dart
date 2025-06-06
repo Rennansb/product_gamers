@@ -8,9 +8,7 @@ import '../repositories/football_repository.dart';
 class SearchRefereeByNameUseCase {
   final FootballRepository repository;
   SearchRefereeByNameUseCase(this.repository);
-
   Future<Either<Failure, List<RefereeBasicInfo>>> call(
-      {required String name}) async {
-    return repository.searchRefereeByName(name: name);
-  }
+          {required String name}) async =>
+      repository.searchRefereeByName(name: name);
 }

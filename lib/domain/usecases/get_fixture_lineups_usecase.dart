@@ -8,12 +8,10 @@ import '../repositories/football_repository.dart';
 class GetFixtureLineupsUseCase {
   final FootballRepository repository;
   GetFixtureLineupsUseCase(this.repository);
-
   Future<Either<Failure, LineupsForFixture?>> call(
-      {required int fixtureId,
-      required int homeTeamId,
-      required int awayTeamId}) async {
-    return repository.getFixtureLineups(
-        fixtureId: fixtureId, homeTeamId: homeTeamId, awayTeamId: awayTeamId);
-  }
+          {required int fixtureId,
+          required int homeTeamId,
+          required int awayTeamId}) async =>
+      repository.getFixtureLineups(
+          fixtureId: fixtureId, homeTeamId: homeTeamId, awayTeamId: awayTeamId);
 }

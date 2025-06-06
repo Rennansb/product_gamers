@@ -7,10 +7,7 @@ import '../repositories/football_repository.dart';
 
 class GetLiveFixtureUpdateUseCase {
   final FootballRepository repository;
-
   GetLiveFixtureUpdateUseCase(this.repository);
-
-  Future<Either<Failure, LiveFixtureUpdate?>> call(int fixtureId) async {
-    return await repository.getLiveFixtureUpdate(fixtureId);
-  }
+  Future<Either<Failure, LiveFixtureUpdate?>> call(int fixtureId) async =>
+      repository.getLiveFixtureUpdate(fixtureId);
 }

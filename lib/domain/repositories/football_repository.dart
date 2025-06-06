@@ -29,7 +29,13 @@ abstract class FootballRepository {
   Future<Either<Failure, List<PrognosticMarket>>> getOddsForFixture(
     // Odds Pré-Jogo
     int fixtureId, {
+    // fixtureId é posicional aqui, como no DataSource
     int? bookmakerId,
+  });
+  Future<Either<Failure, List<PlayerSeasonStats>>> getLeagueTopScorers({
+    required int leagueId, // NOMEADO
+    required String season, // NOMEADO
+    int topN = 10, // NOMEADO
   });
 
   Future<Either<Failure, FixtureStatsEntity?>> getFixtureStatistics({
@@ -52,12 +58,6 @@ abstract class FootballRepository {
   Future<Either<Failure, PlayerSeasonStats?>> getPlayerStats({
     required int playerId,
     required String season,
-  });
-
-  Future<Either<Failure, List<PlayerSeasonStats>>> getLeagueTopScorers({
-    required int leagueId,
-    required String season,
-    int topN = 10,
   });
 
   Future<Either<Failure, RefereeStats?>> getRefereeDetailsAndAggregateStats({
@@ -83,6 +83,7 @@ abstract class FootballRepository {
   });
 
   Future<Either<Failure, List<Fixture>>> getTeamRecentFixtures({
+    // Para forma do time
     required int teamId,
     int lastN = 5,
     String? status,
@@ -94,11 +95,12 @@ abstract class FootballRepository {
 
   // --- Métodos para Dados Ao Vivo ---
   Future<Either<Failure, LiveFixtureUpdate?>> getLiveFixtureUpdate(
-      int fixtureId); // CORRIGIDO: Definição única
+      int fixtureId);
 
   Future<Either<Failure, List<PrognosticMarket>>> getLiveOddsForFixture(
-    // CORRIGIDO: Definição única
+    // Odds Ao Vivo
     int fixtureId, {
+    // fixtureId é posicional aqui
     int? bookmakerId,
   });
 }

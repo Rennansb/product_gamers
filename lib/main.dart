@@ -1,50 +1,22 @@
 // lib/main.dart
-import 'package:dartz/dartz.dart'; // Necessário por causa dos placeholders que usavam Right([])
+// ... (imports para todos os use cases)
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:product_gamers/domain/usecases/get_fixture_lineups_usecase.dart';
+import 'package:product_gamers/core/theme/app_theme.dart';
+import 'package:product_gamers/data/repositories/football_repository_impl.dart';
+import 'package:product_gamers/domain/usecases/generate_suggested_slips_usecase.dart';
+import 'package:product_gamers/domain/usecases/get_fixtures_usecase.dart';
+import 'package:product_gamers/domain/usecases/get_leagues_usecase.dart';
 import 'package:product_gamers/presentation/app_shell.dart';
+import 'package:product_gamers/presentation/providers/league_provider.dart';
 import 'package:product_gamers/presentation/providers/suggested_slips_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 
-// Core
-import 'core/theme/app_theme.dart';
-// import 'core/config/app_constants.dart'; // AppConstants é usado em outras partes, não diretamente aqui
-
-// Data Layer
 import 'data/datasources/football_remote_datasource.dart';
-import 'data/repositories/football_repository_impl.dart';
-
-// Domain Layer
 import 'domain/repositories/football_repository.dart';
-// --- Importar TODOS os UseCases que serão providos globalmente ou usados por providers iniciais ---
-import 'domain/usecases/get_leagues_usecase.dart';
-import 'domain/usecases/get_fixtures_usecase.dart';
-import 'domain/usecases/get_odds_usecase.dart';
-import 'domain/usecases/get_fixture_statistics_usecase.dart';
-import 'domain/usecases/get_h2h_usecase.dart';
-import 'domain/usecases/get_league_standings_usecase.dart';
-import 'domain/usecases/get_player_stats_usecase.dart';
-
-import 'domain/usecases/get_referee_stats_usecase.dart';
-
-import 'domain/usecases/generate_suggested_slips_usecase.dart'; // O principal para bilhetes
-import 'domain/usecases/get_live_fixture_update_usecase.dart';
-import 'domain/usecases/get_live_odds_usecase.dart';
-// UseCase para stats agregadas de times
-// Adicione aqui GetTeamRecentFixturesUseCase se você o criou e quer provê-lo globalmente
-
-// Presentation Layer
-import 'presentation/providers/league_provider.dart';
-
-// FixtureProvider, FixtureDetailProvider, LiveFixtureProvider serão criados dinamicamente
-import 'presentation/screens/home_screen.dart';
-
-// lib/main.dart
-// ... (imports para todos os use cases)
 
 void main() async {
   // ... (inicialização)
@@ -56,7 +28,8 @@ void main() async {
   final FootballRemoteDataSource remoteDataSource =
       FootballRemoteDataSourceImpl(client: httpClient);
   final FootballRepository footballRepository =
-      FootballRepositoryImpl(remoteDataSource: remoteDataSource);
+      FootballRepositoryImpl(remoteDataSource: remoteDataSource)
+          as FootballRepository;
 
   final getLeaguesUseCase = GetLeaguesUseCase(footballRepository);
   final getFixturesUseCase = GetFixturesUseCase(footballRepository);

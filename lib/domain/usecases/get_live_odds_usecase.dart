@@ -7,17 +7,10 @@ import '../repositories/football_repository.dart';
 
 class GetLiveOddsUseCase {
   final FootballRepository repository;
-
   GetLiveOddsUseCase(this.repository);
-
   Future<Either<Failure, List<PrognosticMarket>>> call({
     required int fixtureId,
     int? bookmakerId,
-  }) async {
-    return await repository.getLiveOddsForFixture(
-      // Chama o método para odds AO VIVO
-      fixtureId,
-      bookmakerId: bookmakerId,
-    );
-  }
+  }) async =>
+      repository.getLiveOddsForFixture(fixtureId, bookmakerId: bookmakerId);
 }

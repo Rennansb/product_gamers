@@ -7,17 +7,10 @@ import '../repositories/football_repository.dart';
 
 class GetOddsUseCase {
   final FootballRepository repository;
-
   GetOddsUseCase(this.repository);
-
   Future<Either<Failure, List<PrognosticMarket>>> call({
     required int fixtureId,
     int? bookmakerId,
-  }) async {
-    return await repository.getOddsForFixture(
-      // Para odds PRÉ-JOGO
-      fixtureId,
-      bookmakerId: bookmakerId,
-    );
-  }
+  }) async =>
+      repository.getOddsForFixture(fixtureId, bookmakerId: bookmakerId);
 }

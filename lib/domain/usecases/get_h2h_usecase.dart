@@ -7,20 +7,13 @@ import '../repositories/football_repository.dart';
 
 class GetH2HUseCase {
   final FootballRepository repository;
-
   GetH2HUseCase(this.repository);
-
   Future<Either<Failure, List<Fixture>>> call({
     required int team1Id,
     required int team2Id,
-    int lastN = 5,
+    int lastN = 5, // Ajustado padrão
     String? status = 'FT',
-  }) async {
-    return await repository.getHeadToHead(
-      team1Id: team1Id,
-      team2Id: team2Id,
-      lastN: lastN,
-      status: status,
-    );
-  }
+  }) async =>
+      repository.getHeadToHead(
+          team1Id: team1Id, team2Id: team2Id, lastN: lastN, status: status);
 }

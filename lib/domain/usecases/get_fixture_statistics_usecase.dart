@@ -7,18 +7,12 @@ import '../repositories/football_repository.dart';
 
 class GetFixtureStatisticsUseCase {
   final FootballRepository repository;
-
   GetFixtureStatisticsUseCase(this.repository);
-
   Future<Either<Failure, FixtureStatsEntity?>> call({
     required int fixtureId,
     required int homeTeamId,
     required int awayTeamId,
-  }) async {
-    return await repository.getFixtureStatistics(
-      fixtureId: fixtureId,
-      homeTeamId: homeTeamId,
-      awayTeamId: awayTeamId,
-    );
-  }
+  }) async =>
+      repository.getFixtureStatistics(
+          fixtureId: fixtureId, homeTeamId: homeTeamId, awayTeamId: awayTeamId);
 }

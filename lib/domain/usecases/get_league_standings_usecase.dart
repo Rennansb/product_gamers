@@ -7,16 +7,10 @@ import '../repositories/football_repository.dart';
 
 class GetLeagueStandingsUseCase {
   final FootballRepository repository;
-
   GetLeagueStandingsUseCase(this.repository);
-
   Future<Either<Failure, List<StandingInfo>>> call({
     required int leagueId,
     required String season,
-  }) async {
-    return await repository.getLeagueStandings(
-      leagueId: leagueId,
-      season: season,
-    );
-  }
+  }) async =>
+      repository.getLeagueStandings(leagueId: leagueId, season: season);
 }

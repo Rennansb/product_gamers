@@ -3,9 +3,22 @@ import 'dart:convert';
 import 'dart:io'; // Para SocketException
 import 'dart:async'; // Para TimeoutException
 import 'dart:math'; // Para a simulação no getRefereeDetailsAndAggregateStats
+import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:product_gamers/core/config/failure.dart';
 import 'package:product_gamers/data/models/team_season_aggregated_stats_model.dart';
+import 'package:product_gamers/data/repositories/football_repository.dart';
+import 'package:product_gamers/domain/entities/entities/fixture.dart';
+import 'package:product_gamers/domain/entities/entities/fixture_stats.dart';
+import 'package:product_gamers/domain/entities/entities/league.dart';
+import 'package:product_gamers/domain/entities/entities/lineup.dart';
+import 'package:product_gamers/domain/entities/entities/live_fixture_update.dart';
+import 'package:product_gamers/domain/entities/entities/player_stats.dart';
+import 'package:product_gamers/domain/entities/entities/prognostic_market.dart';
+import 'package:product_gamers/domain/entities/entities/referee_stats.dart';
+import 'package:product_gamers/domain/entities/entities/standing_info.dart';
+import 'package:product_gamers/domain/entities/entities/team_aggregated_stats.dart';
 
 // Core
 import '../../core/config/app_constants.dart';
@@ -66,18 +79,20 @@ abstract class FootballRemoteDataSource {
       {required int teamId, required int leagueId, required String season});
 }
 
-// Implementação do Data Source Remoto
+// -------------------- IMPLEMENTAÇÃO --------------------
 class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
-  final http.Client client;
+  final http.Client client; // Declarado como campo da classe
 
-  FootballRemoteDataSourceImpl({required this.client});
+  FootballRemoteDataSourceImpl({required this.client}); // Construtor correto
 
+  // _headers como um getter da classe
   Map<String, String> get _headers => {
         'x-rapidapi-key': AppConstants.rapidApiKey,
         'x-rapidapi-host': AppConstants.rapidApiHost,
         'Content-Type': 'application/json',
       };
 
+  // _get como um método da classe
   Future<T> _get<T>(
     String endpoint,
     T Function(dynamic jsonResponse) parser, {
@@ -90,16 +105,15 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
     try {
       final response = await this
           .client
-          .get(url, headers: _headers)
-          .timeout(const Duration(seconds: 25)); // Aumentado um pouco o timeout
+          .get(url, headers: _headers) // Uso de this.client e _headers
+          .timeout(const Duration(seconds: 25));
 
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(utf8.decode(response.bodyBytes));
-
         final errors = jsonResponse['errors'];
         if (errors != null &&
             ((errors is List && errors.isNotEmpty) ||
-                (errors is Map && errors.isNotEmpty) || // Simplificado
+                (errors is Map && errors.isNotEmpty) ||
                 (errors is String && errors.isNotEmpty))) {
           String errorMessage = "Erro da API: ";
           if (errors is List)
@@ -128,21 +142,19 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
             (jsonResponse['response'] == null ||
                 (jsonResponse['response'] is List &&
                     jsonResponse['response'].isEmpty))) {
-          // Endpoints que podem retornar lista vazia validamente (sem ser NoDataException)
           final allowedEmptyEndpoints = [
             "/odds",
             "/fixtures/lineups",
             "/fixtures/headtohead",
             "/referees"
-          ]; // /referees?search=...
+          ];
           if (!allowedEmptyEndpoints.any((e) => endpoint.contains(e))) {
             throw NoDataException(
                 message:
-                    "Nenhum dado encontrado para: $endpoint${queryParams ?? ''} (results: 0)");
+                    "Nenhum dado encontrado para: $endpoint${queryParams ?? ''} (API results: 0)");
           }
         }
-        return parser(jsonResponse['response'] ??
-            jsonResponse); // Passa o root se 'response' for nulo
+        return parser(jsonResponse['response'] ?? jsonResponse);
       } else if (response.statusCode == 401 || response.statusCode == 403) {
         throw AuthenticationException(
             message:
@@ -158,8 +170,8 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
             statusCode: response.statusCode);
       } else {
         final String bodyMessage = response.body.isNotEmpty
-            ? "Detalhes: ${response.body.substring(0, (response.body.length > 200 ? 200 : response.body.length))}"
-            : "";
+            ? "Detalhes: ${response.body.substring(0, min(200, response.body.length))}"
+            : "(sem corpo na resposta)";
         throw ServerException(
             message:
                 'Erro na API (Status: ${response.statusCode}). $bodyMessage',
@@ -168,7 +180,7 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
     } on SocketException catch (e) {
       throw NetworkException(
           message:
-              "Sem conexão com a internet ou servidor da API indisponível. (${e.message})");
+              "Sem conexão com a internet ou API indisponível. (${e.message})");
     } on TimeoutException {
       throw NetworkException(
           message: "Tempo limite da requisição para API excedido.");
@@ -177,20 +189,19 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
     } catch (e) {
       if (kDebugMode)
         print(
-            "Erro desconhecido no DataSource em _get para $endpoint: $e (${e.runtimeType.toString()})");
+            "Erro DataSource _get $endpoint: $e (${e.runtimeType.toString()})");
       if (e is FormatException) {
         throw ServerException(
             message:
-                "Erro ao processar a resposta da API (FormatException): ${e.message}");
+                "Erro ao processar resposta da API (FormatException): ${e.message}");
       }
       throw ServerException(
-          message: "Erro inesperado na chamada à API: ${e.toString()}");
+          message: "Erro inesperado na chamada API: ${e.toString()}");
     }
   }
 
   @override
   Future<List<LeagueModel>> getLeagues() async {
-    // ... (implementação como na resposta anterior, está correta)
     List<LeagueModel> leagues = [];
     for (var entry in AppConstants.popularLeagues.entries) {
       final String endpoint = '/leagues';
@@ -201,11 +212,12 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
             queryParams: queryParams);
         if (responseList.isNotEmpty &&
             responseList.first is Map<String, dynamic>) {
-          leagues.add(LeagueModel.fromJson(responseList.first)
-              .copyWith(friendlyName: entry.key));
+          leagues.add(
+              LeagueModel.fromJson(responseList.first as Map<String, dynamic>)
+                  .copyWith(friendlyName: entry.key));
         }
       } on NoDataException catch (e) {
-        if (kDebugMode) print("NoData: Liga ${entry.key}: ${e.message}");
+        if (kDebugMode) print("NoData Liga ${entry.key}: ${e.message}");
       } catch (e) {
         if (kDebugMode) print("Erro Liga ${entry.key}: $e");
       }
@@ -218,14 +230,15 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
   @override
   Future<List<FixtureModel>> getFixturesForLeague(int leagueId, String season,
       {int nextGames = 15}) async {
-    final String endpoint = '/fixtures';
-    final String queryParams =
-        '?league=$leagueId&season=$season&next=$nextGames&status=NS'; // Not Started
+    final endpoint = '/fixtures';
+    final queryParams =
+        '?league=$leagueId&season=$season&next=$nextGames&status=NS';
     return _get(endpoint, (jsonResponse) {
       if (jsonResponse is! List) {
         if (jsonResponse is Map &&
             jsonResponse.isEmpty &&
-            jsonResponse['results'] == 0) return <FixtureModel>[];
+            (jsonResponse['results'] == 0 || jsonResponse['results'] == null))
+          return <FixtureModel>[];
         throw ServerException(
             message: "Formato inesperado para fixtures: $leagueId");
       }
@@ -238,11 +251,10 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
   @override
   Future<FixtureOddsResponseModel> getOddsForFixture(int fixtureId,
       {int? bookmakerId}) async {
-    final int bkId = bookmakerId ?? AppConstants.preferredBookmakerId;
-    final String endpoint = '/odds';
-    final String queryParams = '?fixture=$fixtureId&bookmaker=$bkId';
+    final bkId = bookmakerId ?? AppConstants.preferredBookmakerId;
+    final endpoint = '/odds';
+    final queryParams = '?fixture=$fixtureId&bookmaker=$bkId';
     return _get(endpoint, (jsonResponse) {
-      // jsonResponse aqui é a LISTA da API
       if (jsonResponse is! List) {
         if (jsonResponse is Map && jsonResponse.isEmpty)
           return FixtureOddsResponseModel(fixtureId: fixtureId, bookmakers: []);
@@ -256,8 +268,7 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
   @override
   Future<FixtureOddsResponseModel> fetchLiveOddsForFixture(int fixtureId,
       {int? bookmakerId}) async {
-    return getOddsForFixture(fixtureId,
-        bookmakerId: bookmakerId); // Mesma lógica por enquanto
+    return getOddsForFixture(fixtureId, bookmakerId: bookmakerId);
   }
 
   @override
@@ -265,14 +276,13 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
       {required int fixtureId,
       required int homeTeamId,
       required int awayTeamId}) async {
-    final String endpoint = '/fixtures/statistics';
-    final String queryParams = '?fixture=$fixtureId';
+    final endpoint = '/fixtures/statistics';
+    final queryParams = '?fixture=$fixtureId';
     return _get(endpoint, (jsonResponse) {
-      // jsonResponse aqui é a LISTA da API
       if (jsonResponse is! List) {
         if (jsonResponse is Map &&
             jsonResponse.isEmpty &&
-            jsonResponse['results'] == 0)
+            (jsonResponse['results'] == 0 || jsonResponse['results'] == null))
           return FixtureStatisticsResponseModel.fromJson([],
               homeTeamId: homeTeamId, awayTeamId: awayTeamId);
         throw ServerException(
@@ -289,14 +299,15 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
       required int team2Id,
       int lastN = 10,
       String? status}) async {
-    final String endpoint = '/fixtures/headtohead';
+    final endpoint = '/fixtures/headtohead';
     String queryParams = '?h2h=${team1Id}-${team2Id}&last=$lastN';
     if (status != null && status.isNotEmpty) queryParams += '&status=$status';
     return _get(endpoint, (jsonResponse) {
       if (jsonResponse is! List) {
         if (jsonResponse is Map &&
             jsonResponse.isEmpty &&
-            jsonResponse['results'] == 0) return <FixtureModel>[];
+            (jsonResponse['results'] == 0 || jsonResponse['results'] == null))
+          return <FixtureModel>[];
         throw ServerException(message: "Formato inesperado para H2H.");
       }
       return (jsonResponse)
@@ -308,10 +319,9 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
   @override
   Future<List<PlayerSeasonStatsModel>> getPlayersFromSquad(
       {required int teamId}) async {
-    final String endpoint = '/players/squads';
-    final String queryParams = '?team=$teamId';
+    final endpoint = '/players/squads';
+    final queryParams = '?team=$teamId';
     return _get(endpoint, (jsonResponse) {
-      // jsonResponse é uma LISTA com UM objeto de time
       if (jsonResponse is! List || jsonResponse.isEmpty) return [];
       final squadData = jsonResponse.first as Map<String, dynamic>;
       final playersListJson = squadData['players'] as List<dynamic>? ?? [];
@@ -325,10 +335,9 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
   @override
   Future<PlayerSeasonStatsModel?> getPlayerStats(
       {required int playerId, required String season}) async {
-    final String endpoint = '/players';
-    final String queryParams = '?id=$playerId&season=$season';
+    final endpoint = '/players';
+    final queryParams = '?id=$playerId&season=$season';
     return _get(endpoint, (jsonResponse) {
-      // jsonResponse é uma LISTA com UM jogador
       if (jsonResponse is! List || jsonResponse.isEmpty) return null;
       return PlayerSeasonStatsModel.fromJson(
           jsonResponse.first as Map<String, dynamic>);
@@ -338,10 +347,9 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
   @override
   Future<List<PlayerSeasonStatsModel>> getLeagueTopScorers(
       {required int leagueId, required String season, int topN = 10}) async {
-    final String endpoint = '/players/topscorers';
-    final String queryParams = '?league=$leagueId&season=$season';
+    final endpoint = '/players/topscorers';
+    final queryParams = '?league=$leagueId&season=$season';
     return _get(endpoint, (jsonResponse) {
-      // jsonResponse é uma LISTA de jogadores
       if (jsonResponse is! List)
         throw ServerException(message: "Formato inesperado para artilheiros.");
       return (jsonResponse)
@@ -359,7 +367,7 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
     final String refereeDetailsQueryParams = '?id=$refereeId';
     final refereeBaseModel = await _get(refereeDetailsEndpoint, (jsonResponse) {
       if (jsonResponse is! List || jsonResponse.isEmpty)
-        throw ServerException(
+        throw NoDataException(
             message: "Árbitro com ID $refereeId não encontrado.");
       return RefereeStatsModel.fromJson(
           jsonResponse.first as Map<String, dynamic>);
@@ -367,7 +375,7 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
 
     final String fixturesOfficiatedEndpoint = '/fixtures';
     final String fixturesOfficiatedQueryParams =
-        '?referee=$refereeId&season=$season&status=FT&last=50'; // Pegar até 50 últimos jogos
+        '?referee=$refereeId&season=$season&status=FT&last=50';
 
     int totalYellowAggregated = 0;
     int totalRedAggregated = 0;
@@ -382,29 +390,22 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
 
       for (var fixtureJsonRaw in jsonResponseFixtures) {
         if (fixtureJsonRaw is! Map<String, dynamic>) continue;
-        final fixtureWithEvents = FixtureModel.fromJson(
-            fixtureJsonRaw); // FixtureModel agora parseia events
+        final fixtureWithEvents = FixtureModel.fromJson(fixtureJsonRaw);
 
-        // Usa os campos calculados no FixtureModel (que parseou os events)
         if (fixtureWithEvents.totalYellowCardsInFixture != null ||
             fixtureWithEvents.totalRedCardsInFixture != null) {
           totalYellowAggregated +=
               fixtureWithEvents.totalYellowCardsInFixture ?? 0;
           totalRedAggregated += fixtureWithEvents.totalRedCardsInFixture ?? 0;
           gamesCountForAggregation++;
-        } else if (fixtureWithEvents.events.isEmpty &&
-            fixtureWithEvents.status.shortName == "FT") {
-          // Considera jogo apitado mesmo sem cartões, se a API não listou eventos de cartão.
+        } else if (fixtureWithEvents.status.shortName == "FT") {
           gamesCountForAggregation++;
         }
       }
     } on NoDataException {
       if (kDebugMode)
         print(
-            "Nenhum jogo finalizado encontrado para árbitro $refereeId na temp. $season para agregar stats de cartões.");
-    } catch (e) {
-      if (kDebugMode)
-        print("Erro ao processar jogos do árbitro $refereeId para cartões: $e");
+            "DataSource: Nenhum jogo para árbitro $refereeId na temp. $season para agregar cartões.");
     }
 
     final aggregatedStatsList = gamesCountForAggregation > 0
@@ -427,7 +428,6 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
     final String endpoint = '/standings';
     final String queryParams = '?league=$leagueId&season=$season';
     return _get(endpoint, (jsonResponse) {
-      // jsonResponse é uma LISTA com UM objeto league+standings
       if (jsonResponse is! List || jsonResponse.isEmpty) return null;
       return LeagueStandingsModel.fromJson(
           jsonResponse.first as Map<String, dynamic>);
@@ -439,10 +439,9 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
     final String endpoint = '/fixtures';
     final String queryParams = '?id=$fixtureId';
     return _get(endpoint, (jsonResponse) {
-      // jsonResponse é uma LISTA com UM fixture
       if (jsonResponse is! List || jsonResponse.isEmpty)
         throw ServerException(
-            message: "Nenhum dado ao vivo encontrado para fixture $fixtureId.");
+            message: "Nenhum dado ao vivo para fixture $fixtureId.");
       return LiveFixtureUpdateModel.fromJson(
           jsonResponse.first as Map<String, dynamic>);
     }, queryParams: queryParams);
@@ -454,7 +453,6 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
     final String endpoint = '/referees';
     final String queryParams = '?search=${Uri.encodeComponent(name)}';
     return _get(endpoint, (jsonResponse) {
-      // jsonResponse é uma LISTA de árbitros
       if (jsonResponse is! List) return [];
       return (jsonResponse)
           .map((item) =>
@@ -472,7 +470,6 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
     final String queryParams = '?fixture=$fixtureId';
     try {
       return await _get(endpoint, (jsonResponse) {
-        // jsonResponse é uma LISTA com 2 times e suas lineups
         if (jsonResponse is! List || jsonResponse.isEmpty) return null;
         return FixtureLineupsResponseModel.fromApiList(jsonResponse,
             homeTeamIdApi: homeTeamId, awayTeamIdApi: awayTeamId);
@@ -489,7 +486,6 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
     String queryParams = '?team=$teamId&last=$lastN';
     if (status != null && status.isNotEmpty) queryParams += '&status=$status';
     return _get(endpoint, (jsonResponse) {
-      // jsonResponse é uma LISTA de fixtures
       if (jsonResponse is! List)
         throw ServerException(
             message: "Formato inesperado para jogos recentes do time.");
@@ -509,18 +505,16 @@ class FootballRemoteDataSourceImpl implements FootballRemoteDataSource {
     final String queryParams = '?team=$teamId&league=$leagueId&season=$season';
     try {
       return await _get(endpoint, (jsonResponse) {
-        // /teams/statistics retorna um OBJETO direto, não uma lista
         if (jsonResponse == null ||
-            (jsonResponse is Map && jsonResponse.isEmpty)) return null;
-        // A API-Football para este endpoint, o 'team' e 'league' info estão no root do jsonResponse,
-        // e não dentro de um sub-objeto 'team' ou 'league' como em outros endpoints.
-        // Precisamos garantir que TeamSeasonAggregatedStatsModel.fromJson lide com isso ou
-        // que passemos o jsonResponse de forma que ele encontre 'league' e 'team' (pode ser o jsonResponse todo).
-        // O factory atual espera 'league' e 'team' no root do json que ele recebe.
-        // Se jsonResponse['response'] é o objeto que contém 'league', 'team', 'fixtures', etc., está correto.
-        // Se jsonResponse JÁ É esse objeto, então também está correto.
+            (jsonResponse is Map &&
+                jsonResponse.isEmpty &&
+                (jsonResponse['results'] == 0 ||
+                    jsonResponse['results'] == null))) return null;
         return TeamSeasonAggregatedStatsModel.fromJson(
-            jsonResponse as Map<String, dynamic>, teamId, leagueId, season);
+            jsonResponse as Map<String, dynamic>,
+            fallbackTeamId: teamId,
+            fallbackLeagueId: leagueId,
+            fallbackSeason: season);
       }, queryParams: queryParams);
     } on NoDataException {
       return null;

@@ -173,21 +173,22 @@ class GenerateSuggestedSlipsUseCase {
             (refList) async {
               if (refList.isNotEmpty) {
                 final foundRefereeId = refList.first.id;
-                return (foundRefereeId != 0)
-                    ? await _getRefereeStatsUseCase(
-                        refereeId: foundRefereeId, season: currentSeason)
-                    : Future.value(Left<Failure, RefereeStats?>(NoDataFailure(
-                        message:
-                            "ID do árbitro '${fixture.refereeName}' inválido (0).")));
+                if (foundRefereeId != 0) {
+                  return await _getRefereeStatsUseCase(
+                      refereeId: foundRefereeId, season: currentSeason);
+                } else {
+                  return Left<Failure, RefereeStats?>(NoDataFailure(
+                      message:
+                          "ID do árbitro '${fixture.refereeName}' inválido (0)."));
+                }
               }
-              return Future.value(Left<Failure, RefereeStats?>(NoDataFailure(
-                  message:
-                      "Árbitro '${fixture.refereeName}' não encontrado.")));
+              return Left<Failure, RefereeStats?>(NoDataFailure(
+                  message: "Árbitro '${fixture.refereeName}' não encontrado."));
             },
           );
         }
-        return Future.value(Left<Failure, RefereeStats?>(
-            NoDataFailure(message: "Nome do árbitro não disponível.")));
+        return Left<Failure, RefereeStats?>(
+            NoDataFailure(message: "Nome do árbitro não disponível."));
       }
 
       final oddsResult =

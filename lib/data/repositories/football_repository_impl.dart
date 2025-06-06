@@ -1,5 +1,6 @@
 // lib/data/repositories/football_repository_impl.dart
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import 'package:product_gamers/core/config/failure.dart';
 import 'package:product_gamers/domain/entities/entities/fixture.dart';
 import 'package:product_gamers/domain/entities/entities/fixture_stats.dart';
@@ -57,10 +58,10 @@ class FootballRepositoryImpl implements FootballRepository {
       return Left(
           CacheFailure(message: e.message ?? 'Erro ao acessar o cache.'));
     } catch (e) {
-      print("Erro desconhecido pego no repositório: $e (${e.runtimeType})");
+      if (kDebugMode)
+        print("Erro desconhecido pego no repositório: $e (${e.runtimeType})");
       return Left(UnknownFailure(
-          message:
-              "Ocorreu uma falha inesperada no repositório: ${e.toString()}"));
+          message: "Falha inesperada no repositório: ${e.toString()}"));
     }
   }
 
@@ -127,12 +128,10 @@ class FootballRepositoryImpl implements FootballRepository {
     required int awayTeamId,
   }) async {
     return _tryCatch<FixtureStatsEntity?>(() async {
-      // Retorno pode ser nulo
       final model = await remoteDataSource.getFixtureStatistics(
           fixtureId: fixtureId, homeTeamId: homeTeamId, awayTeamId: awayTeamId);
-      // O modelo FixtureStatisticsResponseModel em si não é nulo, mas seus campos home/away podem ser.
-      // O toEntity criará um FixtureStatsEntity, que pode ter homeTeam/awayTeam nulos.
-      // Se o próprio modelo da resposta fosse anulável no datasource, faríamos model?.toEntity()
+      // O FixtureStatisticsResponseModel.toEntity() deve retornar FixtureStatsEntity.
+      // A nulidade aqui é gerenciada pelo tipo de retorno de _tryCatch.
       return model.toEntity(fixtureId);
     });
   }
@@ -192,9 +191,9 @@ class FootballRepositoryImpl implements FootballRepository {
     required String season,
   }) async {
     return _tryCatch<RefereeStats?>(() async {
+      // remoteDataSource.getRefereeDetailsAndAggregateStats retorna RefereeStatsModel (não anulável)
       final model = await remoteDataSource.getRefereeDetailsAndAggregateStats(
           refereeId: refereeId, season: season);
-      // O model RefereeStatsModel não é anulável, mas suas seasonStats podem ser vazias.
       return model.toEntity(season);
     });
   }
@@ -207,7 +206,8 @@ class FootballRepositoryImpl implements FootballRepository {
     return _tryCatch<List<StandingInfo>>(() async {
       final model = await remoteDataSource.getLeagueStandings(
           leagueId: leagueId, season: season);
-      if (model == null) return [];
+      if (model == null)
+        return []; // Se DataSource retornar nulo (ex: liga não encontrada)
       return model.toEntityList();
     });
   }
@@ -216,8 +216,8 @@ class FootballRepositoryImpl implements FootballRepository {
   Future<Either<Failure, LiveFixtureUpdate?>> getLiveFixtureUpdate(
       int fixtureId) async {
     return _tryCatch<LiveFixtureUpdate?>(() async {
+      // remoteDataSource.fetchLiveFixtureUpdate retorna LiveFixtureUpdateModel (não anulável)
       final model = await remoteDataSource.fetchLiveFixtureUpdate(fixtureId);
-      // O model LiveFixtureUpdateModel não é anulável.
       return model.toEntity();
     });
   }
@@ -231,7 +231,6 @@ class FootballRepositoryImpl implements FootballRepository {
     });
   }
 
-  // ===== NOVAS IMPLEMENTAÇÕES FALTANTES ADICIONADAS ABAIXO =====
   @override
   Future<Either<Failure, LineupsForFixture?>> getFixtureLineups({
     required int fixtureId,
@@ -241,8 +240,7 @@ class FootballRepositoryImpl implements FootballRepository {
     return _tryCatch<LineupsForFixture?>(() async {
       final model = await remoteDataSource.getFixtureLineups(
           fixtureId: fixtureId, homeTeamId: homeTeamId, awayTeamId: awayTeamId);
-      return model
-          ?.toEntity(); // Usa ?. pois o model do DataSource pode ser nulo
+      return model?.toEntity();
     });
   }
 
@@ -255,8 +253,7 @@ class FootballRepositoryImpl implements FootballRepository {
     return _tryCatch<TeamAggregatedStats?>(() async {
       final model = await remoteDataSource.getTeamSeasonAggregatedStats(
           teamId: teamId, leagueId: leagueId, season: season);
-      return model
-          ?.toEntity(); // Usa ?. pois o model do DataSource pode ser nulo
+      return model?.toEntity();
     });
   }
 

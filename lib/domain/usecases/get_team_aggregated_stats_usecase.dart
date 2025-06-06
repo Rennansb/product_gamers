@@ -8,13 +8,11 @@ import '../repositories/football_repository.dart';
 class GetTeamAggregatedStatsUseCase {
   final FootballRepository repository;
   GetTeamAggregatedStatsUseCase(this.repository);
-
   Future<Either<Failure, TeamAggregatedStats?>> call({
     required int teamId,
     required int leagueId,
     required String season,
-  }) async {
-    return repository.getTeamSeasonAggregatedStats(
-        teamId: teamId, leagueId: leagueId, season: season);
-  }
+  }) async =>
+      repository.getTeamSeasonAggregatedStats(
+          teamId: teamId, leagueId: leagueId, season: season);
 }

@@ -8,13 +8,11 @@ import '../repositories/football_repository.dart';
 class GetTeamRecentFixturesUseCase {
   final FootballRepository repository;
   GetTeamRecentFixturesUseCase(this.repository);
-
   Future<Either<Failure, List<Fixture>>> call({
     required int teamId,
     int lastN = 5,
-    String? status = 'FT', // Padrão para jogos finalizados
-  }) async {
-    return repository.getTeamRecentFixtures(
-        teamId: teamId, lastN: lastN, status: status);
-  }
+    String? status = 'FT',
+  }) async =>
+      repository.getTeamRecentFixtures(
+          teamId: teamId, lastN: lastN, status: status);
 }
