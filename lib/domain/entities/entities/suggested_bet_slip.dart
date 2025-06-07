@@ -52,7 +52,9 @@ class BetSelection extends Equatable {
 
 // Representa um bilhete de apostas pré-jogo sugerido
 class SuggestedBetSlip extends Equatable {
-  final String title; // Ex: "Acumulada Ousada do Dia", "Dupla de Favoritos"
+  final String title;
+  final double
+      confidence; // Ex: "Acumulada Ousada do Dia", "Dupla de Favoritos"
   final List<Fixture>
       fixturesInvolved; // Lista de jogos incluídos neste bilhete
   // A ordem pode corresponder à ordem das seleções.
@@ -71,6 +73,7 @@ class SuggestedBetSlip extends Equatable {
     this.overallReasoning,
     required this.dateGenerated,
     required String totalOdds,
+    required this.confidence,
   });
 
   // Calcula a odd total multiplicando as odds individuais

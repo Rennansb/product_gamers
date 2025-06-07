@@ -2,6 +2,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:product_gamers/core/config/failure.dart';
 import 'package:product_gamers/domain/entities/entities/fixture.dart';
+import 'package:product_gamers/domain/entities/entities/fixture_full_data.dart';
 import 'package:product_gamers/domain/entities/entities/league.dart';
 import 'package:product_gamers/domain/entities/entities/lineup.dart';
 import 'package:product_gamers/main.dart'; // Para o tipo Either
@@ -9,7 +10,10 @@ import 'package:product_gamers/main.dart'; // Para o tipo Either
 
 // Interface (contrato) para o repositório de dados de futebol.
 // Define quais operações de dados a camada de domínio pode solicitar.
+
 abstract class FootballRepository {
+  Future<Either<Failure, FixtureFullData>> getFixtureFullData(int fixtureId);
+
   Future<Either<Failure, LineupsForFixture?>> getFixtureLineups(
       {required int fixtureId,
       required int homeTeamId,
